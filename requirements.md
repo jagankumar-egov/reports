@@ -487,9 +487,37 @@ The system will provide a web-based interface for administrators to build data p
 - Custom scripting or formula support
 - Machine learning or predictive analytics
 
-## 11. Environment Configuration Specification
+## 11. UI Component Specifications
 
-### 11.1 Required Environment Variables
+### 11.1 Material UI Components Usage
+- **Navigation**: AppBar, Drawer, Tabs for main navigation
+- **Forms**: TextField, Select, Checkbox, DatePicker for data point configuration
+- **Layout**: Grid, Box, Container for responsive layouts
+- **Feedback**: Alert, Snackbar for notifications
+- **Data Display**: DataGrid for tables, Card for KPIs
+- **Actions**: Button, IconButton, SpeedDial for user actions
+- **Loading**: Skeleton, CircularProgress for loading states
+
+### 11.2 ECharts Integration
+- **Chart Container**: ResponsiveContainer from echarts-for-react
+- **Chart Types**:
+  - Line/Area: Time series data visualization
+  - Bar: Categorical comparisons
+  - Pie/Donut: Part-to-whole relationships
+  - Scatter: Correlation analysis
+  - Heatmap: Matrix data visualization
+- **Interactivity**: Tooltips, zoom, data selection
+- **Theming**: Charts SHALL inherit Material UI theme colors
+
+### 11.3 Dashboard Layout
+- **Grid System**: Material UI Grid with 12-column layout
+- **Widget Container**: Material UI Paper component
+- **Drag & Drop**: react-grid-layout integration with Material UI
+- **Responsive Breakpoints**: xs, sm, md, lg, xl following Material UI standards
+
+## 12. Environment Configuration Specification
+
+### 12.1 Required Environment Variables
 ```
 # Elasticsearch Configuration
 ES_HOST=https://elasticsearch.example.com:9200
@@ -507,7 +535,7 @@ APP_PORT=3000
 API_PORT=4000
 ```
 
-### 11.2 Configuration File Example (config.yaml)
+### 12.2 Configuration File Example (config.yaml)
 ```yaml
 elasticsearch:
   host: ${ES_HOST}
@@ -527,7 +555,7 @@ configIndices:
   audit: reports_audit
 ```
 
-### 11.3 Configuration Validation
+### 12.3 Configuration Validation
 - System SHALL validate all required environment variables on startup
 - System SHALL verify connection to Elasticsearch before starting
 - System SHALL validate that allowed indices exist and are accessible
