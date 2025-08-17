@@ -6,7 +6,7 @@
 This document outlines the functional and non-functional requirements for an Elasticsearch-based reporting tool that enables users to create, manage, and view reports and dashboards using data from Elasticsearch indices.
 
 ### 1.2 Scope
-The system will provide a web-based interface for administrators to build data points and dashboards, and for viewers to access and export report data. All configurations will be persisted in Elasticsearch, and the system will integrate with existing Elasticsearch clusters.
+The system will provide a web-based interface for administrators to build data points and dashboards, and for viewers to access and export report data. All configurations will be persisted in Elasticsearch, and the system will integrate with existing Elasticsearch clusters through configured allowed indices only.
 
 ### 1.3 Stakeholders
 - **Reports Admin**: Users who create and manage data points and dashboards
@@ -15,31 +15,55 @@ The system will provide a web-based interface for administrators to build data p
 
 ## 2. Functional Requirements
 
-### 2.1 User Authentication & Authorization
+### 2.1 Environment Configuration
 
-#### FR-AUTH-001: JWT-Based Authentication
-- The system SHALL support JWT-based authentication using external identity providers (Keycloak, Auth0, or custom)
-- The system SHALL validate JWT tokens on each API request
-- The system SHALL support short-lived access tokens
+#### FR-ENV-001: User Role Configuration
+- The system SHALL support two user roles configured at the environment level: "reports-admin" and "reports-viewer"
+- User roles SHALL be determined by environment configuration, not by authentication implementation
+- The system SHALL read user role from environment variables or configuration files
 
-#### FR-AUTH-002: Role-Based Access Control
-- The system SHALL implement two primary roles: "reports-admin" and "reports-viewer"
-- The system SHALL enforce role-based permissions on all API endpoints
-- The system SHALL support optional multi-tenancy using tenantId claims in JWT
+#### FR-ENV-002: Elasticsearch Connection Configuration
+- The system SHALL read Elasticsearch connection URL from environment configuration
+- The system SHALL support configuring ES cluster credentials at environment level
+- The system SHALL validate connection to Elasticsearch on startup
 
-#### FR-AUTH-003: Session Management
-- The React application SHALL store access tokens securely
-- The system SHALL handle token refresh automatically when tokens expire
+#### FR-ENV-003: Allowed Indices Configuration
+- The system SHALL maintain a configurable list of allowed indices at the environment level
+- The system SHALL ONLY permit access to indices explicitly listed in the configuration
+- The system SHALL prevent any access to indices outside the allowed list
+- The allowed indices list SHALL be defined in environment variables or configuration files
 
-### 2.2 Index and Field Discovery
+### 2.2 Elasticsearch Access Restrictions
+
+#### FR-ES-001: Read-Only Access to Source Indices
+- The system SHALL ONLY perform read operations on source data indices
+- The system SHALL NOT write, update, or delete any documents in source indices
+- The system SHALL NOT modify mappings or settings of source indices
+- The system SHALL NOT execute direct user queries against Elasticsearch
+
+#### FR-ES-002: Configuration Index Access
+- The system SHALL ONLY write to designated reports configuration indices:
+  - reports_datapoints
+  - reports_dashboards
+  - reports_audit (optional)
+- The system SHALL create these indices if they don't exist on first run
+- The system SHALL ONLY modify documents in these configuration indices
+
+#### FR-ES-003: Query Execution
+- The system SHALL ONLY execute pre-defined, validated queries from saved data points
+- The system SHALL NOT accept or execute arbitrary queries from users
+- All queries SHALL be constructed programmatically based on saved configurations
+- The system SHALL validate all query parameters before execution
+
+### 2.3 Index and Field Discovery
 
 #### FR-INDEX-001: Index Listing
-- The system SHALL provide a list of available Elasticsearch indices
-- Admins SHALL be able to view configured ES indices
-- The system SHALL filter indices based on configured patterns or allow-lists
+- The system SHALL provide a list of available Elasticsearch indices from the environment-configured allowed list
+- Admins SHALL ONLY see indices that are in the allowed indices configuration
+- The system SHALL NOT display or allow access to any index outside the configured list
 
 #### FR-INDEX-002: Field Discovery
-- The system SHALL auto-discover fields and their types from ES mappings
+- The system SHALL auto-discover fields and their types from ES mappings for allowed indices only
 - The system SHALL use ES Mapping API to retrieve field information
 - The system SHALL use Field Capabilities API for multi-index compatibility
 
@@ -48,7 +72,7 @@ The system will provide a web-based interface for administrators to build data p
 - The system SHALL indicate whether fields are searchable and aggregatable
 - The system SHALL provide example values for fields when available
 
-### 2.3 Data Point Management
+### 2.4 Data Point Management
 
 #### FR-DP-001: Data Point Creation
 - Admins SHALL be able to create new data points
@@ -96,7 +120,7 @@ The system will provide a web-based interface for administrators to build data p
 - Admins SHALL be able to soft-delete data points (archive)
 - The system SHALL support tagging for organization
 
-### 2.4 Dashboard Management
+### 2.5 Dashboard Management
 
 #### FR-DASH-001: Dashboard Creation
 - Admins SHALL be able to create dashboards
@@ -108,14 +132,16 @@ The system will provide a web-based interface for administrators to build data p
   - Tags
 
 #### FR-DASH-002: Widget Types
-- The system SHALL support the following visualization types:
-  - Table
-  - Bar chart
-  - Line chart
-  - Area chart
-  - Pie/Donut chart
-  - KPI (single metric)
-  - Map (future version)
+- The system SHALL support the following visualization types using ECharts:
+  - Table (Material UI DataGrid)
+  - Bar chart (ECharts bar)
+  - Line chart (ECharts line)
+  - Area chart (ECharts area)
+  - Pie/Donut chart (ECharts pie)
+  - KPI (Material UI Card with metric display)
+  - Scatter plot (ECharts scatter)
+  - Heatmap (ECharts heatmap)
+  - Map (future version - ECharts map)
 
 #### FR-DASH-003: Layout Management
 - The system SHALL provide a grid-based layout system
@@ -139,12 +165,12 @@ The system will provide a web-based interface for administrators to build data p
 - Admins SHALL be able to soft-delete dashboards (archive)
 - Admins SHALL be able to share dashboards with specific roles
 
-### 2.5 Dashboard Viewing
+### 2.6 Dashboard Viewing
 
 #### FR-VIEW-001: Dashboard Access
-- Viewers SHALL be able to access shared dashboards
-- The system SHALL enforce role-based access to dashboards
-- The system SHALL support public links for dashboards (optional)
+- Viewers SHALL be able to access dashboards based on their environment-configured role
+- The system SHALL check user role from environment configuration
+- Dashboard access SHALL be determined by the configured user role
 
 #### FR-VIEW-002: Runtime Filtering
 - Viewers SHALL be able to apply global time range filters
@@ -157,7 +183,7 @@ The system will provide a web-based interface for administrators to build data p
 - The system SHALL support manual refresh of dashboard data
 - The system SHALL batch multiple widget queries for performance
 
-### 2.6 Data Export
+### 2.7 Data Export
 
 #### FR-EXPORT-001: Export Formats
 - The system SHALL support CSV export
@@ -174,7 +200,7 @@ The system will provide a web-based interface for administrators to build data p
 - The system SHALL implement configurable export size limits
 - The system SHALL provide progress indication for large exports
 
-### 2.7 Configuration Persistence
+### 2.8 Configuration Persistence
 
 #### FR-CONFIG-001: Configuration Storage
 - All configurations SHALL be stored in Elasticsearch indices
@@ -186,10 +212,9 @@ The system will provide a web-based interface for administrators to build data p
 
 #### FR-CONFIG-002: Configuration Schema
 - Configuration documents SHALL include common metadata:
-  - tenantId (for multi-tenancy)
   - version number
   - created/updated timestamps
-  - created/updated user IDs
+  - created/updated user identifiers
   - archive status
 
 #### FR-CONFIG-003: Audit Trail
@@ -227,25 +252,28 @@ The system will provide a web-based interface for administrators to build data p
 
 ### 3.2 Security Requirements
 
-#### NFR-SEC-001: Authentication Security
-- All API endpoints SHALL require authentication except health checks
-- JWT tokens SHALL be validated on every request
-- The system SHALL implement secure token storage in the frontend
+#### NFR-SEC-001: Access Control
+- The system SHALL enforce environment-configured role-based access
+- The system SHALL validate user roles from environment configuration
+- The system SHALL restrict admin functions to users with admin role configuration
 
-#### NFR-SEC-002: Authorization Security
-- The system SHALL enforce role-based access control on all operations
-- The system SHALL validate tenant isolation in multi-tenant deployments
-- The system SHALL prevent cross-tenant data access
+#### NFR-SEC-002: Elasticsearch Security
+- The system SHALL ONLY access indices listed in the allowed indices configuration
+- The system SHALL NOT execute any direct user queries against Elasticsearch
+- The system SHALL ONLY write to designated configuration indices
+- The system SHALL validate all operations against the allowed indices list
 
 #### NFR-SEC-003: Query Security
+- The system SHALL ONLY execute pre-validated, saved queries from data points
 - The system SHALL sanitize all user inputs to prevent injection attacks
-- The system SHALL validate queries before execution
+- The system SHALL validate all query parameters before execution
 - The system SHALL implement rate limiting on query endpoints
 
 #### NFR-SEC-004: Data Security
 - The system SHALL use HTTPS for all communications
-- The system SHALL not log sensitive data
-- The system SHALL mask sensitive fields in audit logs
+- The system SHALL not log sensitive data or Elasticsearch credentials
+- The system SHALL protect Elasticsearch connection details
+- The system SHALL never expose raw Elasticsearch errors to end users
 
 ### 3.3 Scalability Requirements
 
@@ -256,8 +284,8 @@ The system will provide a web-based interface for administrators to build data p
 
 #### NFR-SCALE-002: Data Volume
 - The system SHALL handle indices with up to 10 billion documents
-- The system SHALL support up to 1000 data points per tenant
-- The system SHALL support up to 500 dashboards per tenant
+- The system SHALL support up to 1000 data points
+- The system SHALL support up to 500 dashboards
 
 #### NFR-SCALE-003: Caching
 - The system SHALL implement caching for field mappings
@@ -280,6 +308,8 @@ The system will provide a web-based interface for administrators to build data p
 
 #### NFR-USE-001: User Interface
 - The UI SHALL be responsive and work on desktop and tablet devices
+- The UI SHALL follow Material Design principles via Material UI components
+- The UI SHALL use Material UI theming for consistent look and feel
 - The UI SHALL follow accessibility guidelines (WCAG 2.1 Level AA)
 - The UI SHALL provide intuitive navigation and clear labeling
 
@@ -315,47 +345,56 @@ The system will provide a web-based interface for administrators to build data p
 
 ### 4.1 Technology Stack
 - Frontend: React 18+ with TypeScript
+- UI Framework: Material UI (MUI) v5+
+- Charting Library: Apache ECharts with echarts-for-react
 - Backend: Node.js 18+ with TypeScript
 - Database: Elasticsearch 7.10+ or 8.x
-- Authentication: JWT-based (external provider)
 - Build Tools: Vite or Create React App
 - Package Manager: npm or yarn
 
 ### 4.2 Deployment Constraints
 - The system SHALL be deployable as Docker containers
 - The system SHALL support Kubernetes deployment
-- The system SHALL support environment-based configuration
+- The system SHALL support environment-based configuration for:
+  - Elasticsearch connection URL
+  - Elasticsearch credentials
+  - Allowed indices list
+  - User roles
 - The system SHALL support reverse proxy deployment
 
 ### 4.3 Integration Constraints
 - The system SHALL use official Elasticsearch client libraries
 - The system SHALL support Elasticsearch security features (if enabled)
 - The system SHALL handle Elasticsearch version differences gracefully
+- The system SHALL validate connection to configured indices on startup
 
 ## 5. Acceptance Criteria
 
 ### 5.1 Admin Functionality
-- [ ] Admin can authenticate and access admin studio
-- [ ] Admin can discover fields from selected indices
+- [ ] Admin role users can access admin studio based on environment configuration
+- [ ] Admin can discover fields from allowed indices only
 - [ ] Admin can create data points with queries and aggregations
 - [ ] Admin can preview data point results
 - [ ] Admin can create dashboards with multiple widgets
 - [ ] Admin can configure widget visualizations
-- [ ] Admin can save and update configurations
+- [ ] Admin can save and update configurations to designated ES indices
 - [ ] Admin can manage tags and organization
 
 ### 5.2 Viewer Functionality
-- [ ] Viewer can authenticate and access dashboards
-- [ ] Viewer can view dashboard with real-time data
+- [ ] Viewer role users can access dashboards based on environment configuration
+- [ ] Viewer can view dashboard with real-time data from allowed indices
 - [ ] Viewer can apply filters to dashboard
 - [ ] Viewer can export data to CSV
 - [ ] Viewer can export data to Excel
 - [ ] Viewer sees appropriate error messages
 
 ### 5.3 System Functionality
-- [ ] System persists all configurations to Elasticsearch
+- [ ] System reads configuration from environment variables
+- [ ] System validates allowed indices configuration on startup
+- [ ] System persists all configurations to designated Elasticsearch indices only
 - [ ] System maintains version history
-- [ ] System enforces role-based access
+- [ ] System enforces environment-configured role-based access
+- [ ] System prevents any direct query execution
 - [ ] System handles concurrent users
 - [ ] System provides acceptable performance
 - [ ] System logs audit trail
@@ -395,10 +434,13 @@ The system will provide a web-based interface for administrators to build data p
 
 ### 7.2 Security Risks
 - **Risk**: Unauthorized data access
-  - **Mitigation**: Strict RBAC enforcement, tenant isolation
+  - **Mitigation**: Strict allowed indices configuration, environment-based role enforcement
 
 - **Risk**: Query injection attacks
-  - **Mitigation**: Input validation, parameterized queries
+  - **Mitigation**: No direct query execution, only pre-defined data point queries, input validation
+
+- **Risk**: Access to non-allowed indices
+  - **Mitigation**: Validate all operations against allowed indices list, reject any access outside configuration
 
 ### 7.3 Operational Risks
 - **Risk**: Elasticsearch cluster unavailability
@@ -408,28 +450,34 @@ The system will provide a web-based interface for administrators to build data p
 
 ### 8.1 External Dependencies
 - Elasticsearch cluster (7.10+ or 8.x)
-- Authentication provider (Keycloak/Auth0/custom)
 - Redis cache (optional)
 - Container runtime (Docker/Kubernetes)
 
 ### 8.2 Internal Dependencies
 - Network connectivity to Elasticsearch
-- Appropriate Elasticsearch permissions
+- Appropriate Elasticsearch permissions for configuration indices
 - Configuration indices created with proper mappings
+- Environment configuration properly set
 
 ## 9. Assumptions
 
 - Elasticsearch cluster is already deployed and operational
 - Data is already indexed in Elasticsearch
-- Authentication provider is configured and available
+- Allowed indices are properly configured in environment
+- User roles are determined through environment configuration
 - Users have appropriate network access to the application
 - Elasticsearch indices follow consistent naming patterns
 - Time-series data includes appropriate timestamp fields
+- System administrators will manage user role assignments through environment configuration
 
 ## 10. Out of Scope (Version 1)
 
+- User authentication implementation (handled by environment config)
+- User management interface
+- Direct query execution interface
 - Cross-database federation
 - ETL or data transformation capabilities
+- Writing to source data indices
 - Custom visualization plugins
 - Real-time streaming dashboards
 - Advanced scheduling and alerting
@@ -438,3 +486,49 @@ The system will provide a web-based interface for administrators to build data p
 - Dashboard embedding in external applications
 - Custom scripting or formula support
 - Machine learning or predictive analytics
+
+## 11. Environment Configuration Specification
+
+### 11.1 Required Environment Variables
+```
+# Elasticsearch Configuration
+ES_HOST=https://elasticsearch.example.com:9200
+ES_USERNAME=reports_user
+ES_PASSWORD=secure_password
+
+# Allowed Indices (comma-separated)
+ES_ALLOWED_INDICES=logs-*,metrics-*,events-*
+
+# User Role Configuration
+USER_ROLE=reports-admin  # or reports-viewer
+
+# Application Configuration
+APP_PORT=3000
+API_PORT=4000
+```
+
+### 11.2 Configuration File Example (config.yaml)
+```yaml
+elasticsearch:
+  host: ${ES_HOST}
+  username: ${ES_USERNAME}
+  password: ${ES_PASSWORD}
+  
+allowedIndices:
+  - logs-*
+  - metrics-*
+  - events-*
+  
+userRole: ${USER_ROLE}
+
+configIndices:
+  datapoints: reports_datapoints
+  dashboards: reports_dashboards
+  audit: reports_audit
+```
+
+### 11.3 Configuration Validation
+- System SHALL validate all required environment variables on startup
+- System SHALL verify connection to Elasticsearch before starting
+- System SHALL validate that allowed indices exist and are accessible
+- System SHALL fail fast with clear error messages if configuration is invalid
