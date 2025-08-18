@@ -32,14 +32,8 @@ function DataPointsPage() {
     }
   );
 
-  const handleRun = async (id: string) => {
-    try {
-      const response = await dataPointsAPI.run(id);
-      console.log('Data point results:', response.data);
-      // You could show results in a modal or navigate to a results page
-    } catch (error) {
-      console.error('Failed to run data point:', error);
-    }
+  const handleRun = (id: string) => {
+    navigate(`/datapoints/${id}/view`);
   };
 
   if (isLoading) {

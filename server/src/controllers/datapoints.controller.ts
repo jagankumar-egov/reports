@@ -124,7 +124,7 @@ export const deleteDataPoint = async (req: Request, res: Response) => {
 export const runDataPoint = async (req: Request, res: Response) => {
   try {
     const { id } = req.params;
-    const { filters, timeRange } = req.body;
+    const { filters, timeRange, projections } = req.body;
     
     const dataPoint = await elasticsearchService.getDataPoint(id);
     
@@ -145,14 +145,14 @@ export const runDataPoint = async (req: Request, res: Response) => {
       query.bool.must.push(dataPoint.query);
     }
 
-    // Add time range filter
-    if (timeRange || dataPoint.source.defaultTimeRange) {
-      const range = timeRange || dataPoint.source.defaultTimeRange;
-      if (dataPoint.source.timeField) {
+    // Add time range filter - skip if timeRange is explicitly 'all'
+    if (timeRange !== 'all') {
+      const effectiveTimeRange = timeRange || dataPoint.source.defaultTimeRange;
+      if (effectiveTimeRange && effectiveTimeRange !== 'all' && dataPoint.source.timeField) {
         query.bool.filter.push({
           range: {
             [dataPoint.source.timeField]: {
-              gte: range,
+              gte: effectiveTimeRange,
             },
           },
         });
@@ -181,9 +181,10 @@ export const runDataPoint = async (req: Request, res: Response) => {
       searchBody.aggs = dataPoint.aggs;
     }
 
-    // Add projections (source filtering)
-    if (dataPoint.projections && dataPoint.projections.length > 0) {
-      searchBody._source = dataPoint.projections;
+    // Add projections (source filtering) - use runtime projections if provided, otherwise use dataPoint defaults
+    const activeProjections = projections || dataPoint.projections;
+    if (activeProjections && activeProjections.length > 0) {
+      searchBody._source = activeProjections;
     }
 
     // Execute the search

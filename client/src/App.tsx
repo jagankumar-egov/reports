@@ -10,6 +10,7 @@ import Layout from './components/Layout';
 import DashboardsPage from './pages/DashboardsPage';
 import DataPointsPage from './pages/DataPointsPage';
 import DashboardViewerPage from './pages/DashboardViewerPage';
+import DataPointViewerPage from './pages/DataPointViewerPage';
 import DataPointBuilderPage from './pages/DataPointBuilderPage';
 import DashboardBuilderPage from './pages/DashboardBuilderPage';
 
@@ -41,6 +42,7 @@ function App() {
                     <Route path="/dashboards/new" element={<DashboardBuilderPage />} />
                     <Route path="/dashboards/:id/edit" element={<DashboardBuilderPage />} />
                     <Route path="/datapoints" element={<DataPointsPage />} />
+                    <Route path="/datapoints/:id/view" element={<DataPointViewerPage />} />
                     <Route path="/datapoints/new" element={<DataPointBuilderPage />} />
                     <Route path="/datapoints/:id/edit" element={<DataPointBuilderPage />} />
                   </>

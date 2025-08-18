@@ -8,7 +8,8 @@ set -e
 # Configuration
 ES_HOST=${ES_HOST:-"http://localhost:9200"}
 ES_USER=${ES_USERNAME:-"elastic"}
-ES_PASS=${ES_PASSWORD:-"changeme"}
+ES_PASS=${ES_PASSWORD:-"ZDRlODI0MTA3MWZiMTFlZmFk"}
+
 
 echo "Setting up test data for Elasticsearch Reports Tool..."
 echo "Elasticsearch Host: $ES_HOST"

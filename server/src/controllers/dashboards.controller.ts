@@ -126,7 +126,7 @@ export const runDashboard = async (req: Request, res: Response) => {
 
     // Execute each widget's data point
     for (const widget of dashboard.widgets) {
-      const dataPoint = await elasticsearchService.getDataPoint(widget.dataPointId);
+      const dataPoint = await elasticsearchService.getDataPoint(widget.dataPointSlug);
       
       if (!dataPoint) {
         widgetResults.push({
@@ -149,14 +149,14 @@ export const runDashboard = async (req: Request, res: Response) => {
         query.bool.must.push(dataPoint.query);
       }
 
-      // Add time range filter
-      if (timeRange || dataPoint.source.defaultTimeRange) {
-        const range = timeRange || dataPoint.source.defaultTimeRange;
-        if (dataPoint.source.timeField) {
+      // Add time range filter - skip if timeRange is explicitly 'all'
+      if (timeRange !== 'all') {
+        const effectiveTimeRange = timeRange || dataPoint.source.defaultTimeRange;
+        if (effectiveTimeRange && effectiveTimeRange !== 'all' && dataPoint.source.timeField) {
           query.bool.filter.push({
             range: {
               [dataPoint.source.timeField]: {
-                gte: range,
+                gte: effectiveTimeRange,
               },
             },
           });
@@ -164,7 +164,7 @@ export const runDashboard = async (req: Request, res: Response) => {
       }
 
       // Add runtime filters
-      if (filters) {
+      if (filters && Array.isArray(filters)) {
         for (const filter of filters) {
           if (filter.type === 'term') {
             query.bool.filter.push({ term: { [filter.field]: filter.value } });

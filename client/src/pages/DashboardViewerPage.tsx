@@ -14,15 +14,32 @@ import {
   Grid,
   Card,
   CardContent,
+  FormControl,
+  InputLabel,
+  Select,
+  MenuItem,
 } from '@mui/material';
 import { Refresh as RefreshIcon, Download as DownloadIcon } from '@mui/icons-material';
 import { dashboardsAPI } from '../services/api';
 import { echartsTheme } from '../theme';
 
+const timeRangeOptions = [
+  { value: 'now-1h', label: 'Last 1 Hour' },
+  { value: 'now-6h', label: 'Last 6 Hours' },
+  { value: 'now-24h', label: 'Last 24 Hours' },
+  { value: 'now-7d', label: 'Last 7 Days' },
+  { value: 'now-30d', label: 'Last 30 Days' },
+  { value: 'now-90d', label: 'Last 90 Days' },
+  { value: 'now-1y', label: 'Last 1 Year' },
+  { value: 'now-2y', label: 'Last 2 Years' },
+  { value: 'now-5y', label: 'Last 5 Years' },
+  { value: 'all', label: 'All Time' },
+];
+
 function DashboardViewerPage() {
   const { id } = useParams();
   const [filters, setFilters] = useState<any>({});
-  const [timeRange, setTimeRange] = useState('now-7d');
+  const [timeRange, setTimeRange] = useState('now-30d');
 
   const { data: dashboard, isLoading: dashboardLoading } = useQuery(
     ['dashboard', id],
@@ -209,13 +226,20 @@ function DashboardViewerPage() {
           {dashboard.name}
         </Typography>
         <Box>
-          <TextField
-            label="Time Range"
-            value={timeRange}
-            onChange={(e) => setTimeRange(e.target.value)}
-            size="small"
-            sx={{ mr: 2 }}
-          />
+          <FormControl size="small" sx={{ mr: 2, minWidth: 160 }}>
+            <InputLabel>Time Range</InputLabel>
+            <Select
+              value={timeRange}
+              onChange={(e) => setTimeRange(e.target.value)}
+              label="Time Range"
+            >
+              {timeRangeOptions.map((option) => (
+                <MenuItem key={option.value} value={option.value}>
+                  {option.label}
+                </MenuItem>
+              ))}
+            </Select>
+          </FormControl>
           <Button
             variant="outlined"
             startIcon={<RefreshIcon />}
