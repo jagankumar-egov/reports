@@ -1,11 +1,11 @@
 openapi: 3.0.3
 info:
   title: Jira Dashboard Flow API
-  version: 1.2.0
+  version: 2.0.0
   description: >
-    Consolidated API specification for Jira-like dashboard flows.
-    Covers querying issues, saving filters, listing indexes & fields,
-    managing dashboards, gadgets, and fetching dashboard configs.
+    Enhanced API specification for Jira-like dashboard flows.
+    Covers querying issues, managing filters, creating/editing dashboards,
+    full CRUD operations for gadgets, and bulk data export processes.
 
 servers:
   - url: https://your-domain.atlassian.net/rest/api/3
@@ -107,6 +107,87 @@ paths:
                       type: string
                     jql:
                       type: string
+
+  /filter/{filterId}:
+    get:
+      summary: Get specific filter details
+      description: Retrieve details of a specific saved filter.
+      parameters:
+        - name: filterId
+          in: path
+          required: true
+          schema:
+            type: string
+      responses:
+        "200":
+          description: Filter details
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  id:
+                    type: string
+                  name:
+                    type: string
+                  jql:
+                    type: string
+                  description:
+                    type: string
+                  favourite:
+                    type: boolean
+
+    put:
+      summary: Update a saved filter
+      description: Update an existing saved filter.
+      parameters:
+        - name: filterId
+          in: path
+          required: true
+          schema:
+            type: string
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              properties:
+                name:
+                  type: string
+                jql:
+                  type: string
+                description:
+                  type: string
+                favourite:
+                  type: boolean
+      responses:
+        "200":
+          description: Updated filter details
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  id:
+                    type: string
+                  name:
+                    type: string
+                  jql:
+                    type: string
+
+    delete:
+      summary: Delete a saved filter
+      description: Delete an existing saved filter.
+      parameters:
+        - name: filterId
+          in: path
+          required: true
+          schema:
+            type: string
+      responses:
+        "204":
+          description: Filter deleted successfully
 
   /project:
     get:
@@ -250,6 +331,87 @@ paths:
                     name:
                       type: string
 
+  /dashboard/{dashboardId}:
+    get:
+      summary: Get dashboard details
+      description: Get specific dashboard details including metadata.
+      parameters:
+        - name: dashboardId
+          in: path
+          required: true
+          schema:
+            type: string
+      responses:
+        "200":
+          description: Dashboard details
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  id:
+                    type: string
+                  name:
+                    type: string
+                  description:
+                    type: string
+                  sharePermissions:
+                    type: array
+                    items:
+                      type: object
+
+    put:
+      summary: Update dashboard
+      description: Update dashboard name, description, or permissions.
+      parameters:
+        - name: dashboardId
+          in: path
+          required: true
+          schema:
+            type: string
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              properties:
+                name:
+                  type: string
+                description:
+                  type: string
+                sharePermissions:
+                  type: array
+                  items:
+                    type: object
+      responses:
+        "200":
+          description: Updated dashboard details
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  id:
+                    type: string
+                  name:
+                    type: string
+                  description:
+                    type: string
+
+    delete:
+      summary: Delete dashboard
+      description: Delete an existing dashboard and all its gadgets.
+      parameters:
+        - name: dashboardId
+          in: path
+          required: true
+          schema:
+            type: string
+      responses:
+        "204":
+          description: Dashboard deleted successfully
+
   /dashboard/{dashboardId}/gadget:
     post:
       summary: Add gadget (chart/stat) to dashboard
@@ -296,6 +458,111 @@ paths:
                   field:
                     type: string
 
+  /dashboard/{dashboardId}/gadget/{gadgetId}:
+    get:
+      summary: Get gadget details
+      description: Get specific gadget configuration and settings.
+      parameters:
+        - name: dashboardId
+          in: path
+          required: true
+          schema:
+            type: string
+        - name: gadgetId
+          in: path
+          required: true
+          schema:
+            type: string
+      responses:
+        "200":
+          description: Gadget details
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  gadgetId:
+                    type: string
+                  type:
+                    type: string
+                  title:
+                    type: string
+                  config:
+                    type: object
+                  position:
+                    type: object
+
+    put:
+      summary: Update gadget configuration
+      description: Update gadget settings, position, or configuration.
+      parameters:
+        - name: dashboardId
+          in: path
+          required: true
+          schema:
+            type: string
+        - name: gadgetId
+          in: path
+          required: true
+          schema:
+            type: string
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              properties:
+                type:
+                  type: string
+                filterId:
+                  type: string
+                field:
+                  type: string
+                title:
+                  type: string
+                position:
+                  type: object
+                  properties:
+                    row:
+                      type: integer
+                    col:
+                      type: integer
+      responses:
+        "200":
+          description: Updated gadget details
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  gadgetId:
+                    type: string
+                  type:
+                    type: string
+                  filterId:
+                    type: string
+                  field:
+                    type: string
+
+    delete:
+      summary: Remove gadget from dashboard
+      description: Delete a gadget from the dashboard.
+      parameters:
+        - name: dashboardId
+          in: path
+          required: true
+          schema:
+            type: string
+        - name: gadgetId
+          in: path
+          required: true
+          schema:
+            type: string
+      responses:
+        "204":
+          description: Gadget removed successfully
+
   /dashboard/{dashboardId}/config:
     get:
       summary: Fetch dashboard config
@@ -341,3 +608,202 @@ paths:
                               type: integer
                             col:
                               type: integer
+
+  /export/bulk:
+    post:
+      summary: Initiate bulk data export
+      description: >
+        Start a background process to export filter results in bulk.
+        Returns a process ID to track the export status.
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              properties:
+                filterId:
+                  type: string
+                  description: Filter to export data from
+                format:
+                  type: string
+                  enum: [csv, excel, json, pdf]
+                  description: Export format
+                fields:
+                  type: array
+                  items:
+                    type: string
+                  description: Specific fields to include in export
+                maxResults:
+                  type: integer
+                  description: Maximum number of records to export
+                  default: 10000
+              required:
+                - filterId
+                - format
+              example:
+                filterId: "10005"
+                format: "csv"
+                fields: ["key", "summary", "status", "assignee", "created"]
+                maxResults: 50000
+      responses:
+        "202":
+          description: Export process initiated
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  processId:
+                    type: string
+                    description: Unique process identifier
+                  status:
+                    type: string
+                    enum: [initiated, processing]
+                  estimatedTime:
+                    type: string
+                    description: Estimated completion time
+                example:
+                  processId: "exp_123456789"
+                  status: "initiated"
+                  estimatedTime: "2-5 minutes"
+
+  /export/process/{processId}:
+    get:
+      summary: Check export process status
+      description: Get the current status of a bulk export process.
+      parameters:
+        - name: processId
+          in: path
+          required: true
+          schema:
+            type: string
+      responses:
+        "200":
+          description: Process status information
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  processId:
+                    type: string
+                  status:
+                    type: string
+                    enum: [initiated, processing, completed, failed, expired]
+                  progress:
+                    type: integer
+                    description: Progress percentage (0-100)
+                  recordsProcessed:
+                    type: integer
+                  totalRecords:
+                    type: integer
+                  downloadUrl:
+                    type: string
+                    description: Download URL (available when status is completed)
+                  expiresAt:
+                    type: string
+                    format: date-time
+                    description: When the download link expires
+                  errorMessage:
+                    type: string
+                    description: Error details (if status is failed)
+                example:
+                  processId: "exp_123456789"
+                  status: "completed"
+                  progress: 100
+                  recordsProcessed: 45623
+                  totalRecords: 45623
+                  downloadUrl: "/export/download/exp_123456789"
+                  expiresAt: "2024-01-15T10:30:00Z"
+
+    delete:
+      summary: Cancel export process
+      description: Cancel a running export process.
+      parameters:
+        - name: processId
+          in: path
+          required: true
+          schema:
+            type: string
+      responses:
+        "204":
+          description: Export process cancelled
+        "404":
+          description: Process not found or already completed
+
+  /export/download/{processId}:
+    get:
+      summary: Download export file
+      description: Download the exported file for a completed process.
+      parameters:
+        - name: processId
+          in: path
+          required: true
+          schema:
+            type: string
+      responses:
+        "200":
+          description: Export file download
+          content:
+            application/octet-stream:
+              schema:
+                type: string
+                format: binary
+            text/csv:
+              schema:
+                type: string
+            application/json:
+              schema:
+                type: object
+        "404":
+          description: File not found or expired
+        "410":
+          description: Download link expired
+
+  /export/processes:
+    get:
+      summary: List user's export processes
+      description: Get list of export processes for current user.
+      parameters:
+        - name: status
+          in: query
+          required: false
+          schema:
+            type: string
+            enum: [initiated, processing, completed, failed, expired]
+        - name: limit
+          in: query
+          required: false
+          schema:
+            type: integer
+            default: 20
+      responses:
+        "200":
+          description: List of export processes
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  processes:
+                    type: array
+                    items:
+                      type: object
+                      properties:
+                        processId:
+                          type: string
+                        status:
+                          type: string
+                        filterId:
+                          type: string
+                        format:
+                          type: string
+                        createdAt:
+                          type: string
+                          format: date-time
+                        completedAt:
+                          type: string
+                          format: date-time
+                  total:
+                    type: integer
