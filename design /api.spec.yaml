@@ -1,0 +1,343 @@
+openapi: 3.0.3
+info:
+  title: Jira Dashboard Flow API
+  version: 1.2.0
+  description: >
+    Consolidated API specification for Jira-like dashboard flows.
+    Covers querying issues, saving filters, listing indexes & fields,
+    managing dashboards, gadgets, and fetching dashboard configs.
+
+servers:
+  - url: https://your-domain.atlassian.net/rest/api/3
+
+paths:
+  /search:
+    post:
+      summary: Execute a JQL query
+      description: Run a JQL query and return matching issues.
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              properties:
+                jql:
+                  type: string
+                  example: "project = HCM AND status = 'In Progress'"
+                startAt:
+                  type: integer
+                  default: 0
+                maxResults:
+                  type: integer
+                  default: 50
+                fields:
+                  type: array
+                  items:
+                    type: string
+                  example: ["summary", "status", "assignee"]
+      responses:
+        "200":
+          description: List of issues matching query
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  issues:
+                    type: array
+                    items:
+                      type: object
+
+  /filter:
+    post:
+      summary: Save a query as filter
+      description: Create a saved filter from JQL.
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              properties:
+                name:
+                  type: string
+                jql:
+                  type: string
+                description:
+                  type: string
+                favourite:
+                  type: boolean
+              example:
+                name: "HCM In Progress Issues"
+                jql: "project = HCM AND status = 'In Progress'"
+                description: "All active issues in HCM"
+                favourite: true
+      responses:
+        "201":
+          description: Saved filter details
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  id:
+                    type: string
+                  name:
+                    type: string
+                  jql:
+                    type: string
+
+    get:
+      summary: List saved filters
+      description: Get current user’s filters.
+      responses:
+        "200":
+          description: List of saved filters
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  type: object
+                  properties:
+                    id:
+                      type: string
+                    name:
+                      type: string
+                    jql:
+                      type: string
+
+  /project:
+    get:
+      summary: List allowed data indexes (projects)
+      description: >
+        Get list of projects that can be used as "data indexes" for querying issues.
+      responses:
+        "200":
+          description: List of projects
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  type: object
+                  properties:
+                    id:
+                      type: string
+                    key:
+                      type: string
+                    name:
+                      type: string
+
+  /field:
+    get:
+      summary: List all available fields
+      description: >
+        Get list of fields that can be used in queries (like status, priority, assignee).
+      responses:
+        "200":
+          description: List of fields
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  type: object
+                  properties:
+                    id:
+                      type: string
+                    name:
+                      type: string
+                    schema:
+                      type: object
+                      properties:
+                        type:
+                          type: string
+
+  /gadgets:
+    get:
+      summary: List available gadgets
+      description: >
+        Get all available gadget types with their supported configuration properties.
+      responses:
+        "200":
+          description: List of gadget definitions
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  type: object
+                  properties:
+                    id:
+                      type: string
+                      example: "pie-chart"
+                    name:
+                      type: string
+                      example: "Pie Chart"
+                    supportedProps:
+                      type: array
+                      items:
+                        type: object
+                        properties:
+                          name:
+                            type: string
+                            example: "filterId"
+                          type:
+                            type: string
+                            example: "string"
+                          required:
+                            type: boolean
+                            example: true
+
+  /dashboard:
+    post:
+      summary: Create a dashboard
+      description: Create a new Jira dashboard.
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              properties:
+                name:
+                  type: string
+                description:
+                  type: string
+                sharePermissions:
+                  type: array
+                  items:
+                    type: object
+              example:
+                name: "HCM Dashboard"
+                description: "Monitoring HCM project issues"
+                sharePermissions:
+                  - type: "group"
+                    group:
+                      name: "jira-software-users"
+      responses:
+        "201":
+          description: Created dashboard
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  id:
+                    type: string
+                  name:
+                    type: string
+                  self:
+                    type: string
+
+    get:
+      summary: List dashboards
+      description: Get dashboards visible to the user.
+      responses:
+        "200":
+          description: List of dashboards
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  type: object
+                  properties:
+                    id:
+                      type: string
+                    name:
+                      type: string
+
+  /dashboard/{dashboardId}/gadget:
+    post:
+      summary: Add gadget (chart/stat) to dashboard
+      description: >
+        Simulated API (not official Jira Cloud).
+        Gadgets typically consume filters & fields.
+        Example for Pie Chart gadget: group by "priority".
+      parameters:
+        - name: dashboardId
+          in: path
+          required: true
+          schema:
+            type: string
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              properties:
+                type:
+                  type: string
+                  example: "pie-chart"
+                filterId:
+                  type: string
+                  example: "10005"
+                field:
+                  type: string
+                  example: "priority"
+      responses:
+        "201":
+          description: Gadget added to dashboard
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  gadgetId:
+                    type: string
+                  type:
+                    type: string
+                  filterId:
+                    type: string
+                  field:
+                    type: string
+
+  /dashboard/{dashboardId}/config:
+    get:
+      summary: Fetch dashboard config
+      description: >
+        Get full dashboard configuration including gadgets, filters, and fields used.
+      parameters:
+        - name: dashboardId
+          in: path
+          required: true
+          schema:
+            type: string
+      responses:
+        "200":
+          description: Dashboard config with gadgets and settings
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  id:
+                    type: string
+                  name:
+                    type: string
+                  description:
+                    type: string
+                  gadgets:
+                    type: array
+                    items:
+                      type: object
+                      properties:
+                        gadgetId:
+                          type: string
+                        type:
+                          type: string
+                        title:
+                          type: string
+                        config:
+                          type: object
+                        position:
+                          type: object
+                          properties:
+                            row:
+                              type: integer
+                            col:
+                              type: integer
