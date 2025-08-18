@@ -698,13 +698,12 @@ paths:
                     type: integer
                   totalRecords:
                     type: integer
-                  downloadUrl:
+                  fileStoreId:
                     type: string
-                    description: Download URL (available when status is completed)
-                  expiresAt:
+                    description: DIGIT Filestore ID (available when status is completed)
+                  tenantId:
                     type: string
-                    format: date-time
-                    description: When the download link expires
+                    description: Tenant ID for filestore access
                   errorMessage:
                     type: string
                     description: Error details (if status is failed)
@@ -714,8 +713,8 @@ paths:
                   progress: 100
                   recordsProcessed: 45623
                   totalRecords: 45623
-                  downloadUrl: "/export/download/exp_123456789"
-                  expiresAt: "2024-01-15T10:30:00Z"
+                  fileStoreId: "fs_abc123xyz789"
+                  tenantId: "pb"
 
     delete:
       summary: Cancel export process
@@ -731,35 +730,6 @@ paths:
           description: Export process cancelled
         "404":
           description: Process not found or already completed
-
-  /export/download/{processId}:
-    get:
-      summary: Download export file
-      description: Download the exported file for a completed process.
-      parameters:
-        - name: processId
-          in: path
-          required: true
-          schema:
-            type: string
-      responses:
-        "200":
-          description: Export file download
-          content:
-            application/octet-stream:
-              schema:
-                type: string
-                format: binary
-            text/csv:
-              schema:
-                type: string
-            application/json:
-              schema:
-                type: object
-        "404":
-          description: File not found or expired
-        "410":
-          description: Download link expired
 
   /export/processes:
     get:
