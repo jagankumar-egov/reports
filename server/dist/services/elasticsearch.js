@@ -13,12 +13,23 @@ class ElasticsearchService {
     }
     async initialize() {
         try {
+            const projectIndexMapping = {};
+            if (process.env.PROJECT_INDEX_MAPPING) {
+                const mappingPairs = process.env.PROJECT_INDEX_MAPPING.split(',');
+                for (const pair of mappingPairs) {
+                    const [project, index] = pair.trim().split(':');
+                    if (project && index) {
+                        projectIndexMapping[project.toLowerCase()] = index;
+                    }
+                }
+            }
             this.config = {
                 host: process.env.ELASTICSEARCH_HOST,
                 username: process.env.ELASTICSEARCH_USERNAME,
                 password: process.env.ELASTICSEARCH_PASSWORD,
                 caCert: process.env.ELASTICSEARCH_CA_CERT,
                 allowedIndexes: process.env.ALLOWED_HEALTH_INDEXES?.split(',') || [],
+                projectIndexMapping: projectIndexMapping,
                 requestTimeout: 30000,
                 maxRetries: 3,
             };
@@ -81,12 +92,33 @@ class ElasticsearchService {
         }
     }
     async search(params) {
-        if (!this.client)
+        const operationStartTime = Date.now();
+        const operationId = Math.random().toString(36).substr(2, 9);
+        logger_1.logger.info(`[ES-SEARCH-${operationId}] Starting Elasticsearch search operation`, {
+            operationId,
+            index: params.index,
+            queryType: params.query?.bool ? 'bool' : params.query?.match_all ? 'match_all' : 'other',
+            from: params.from || 0,
+            size: params.size || 50,
+        });
+        if (!this.client) {
+            logger_1.logger.error(`[ES-SEARCH-${operationId}] Elasticsearch client not initialized`);
             throw new Error('Elasticsearch client not initialized');
+        }
         const requestedIndexes = Array.isArray(params.index) ? params.index : [params.index];
+        logger_1.logger.debug(`[ES-SEARCH-${operationId}] Validating access to indexes:`, requestedIndexes);
+        const validationStartTime = Date.now();
         this.validateIndexAccess(requestedIndexes);
+        const validationTime = Date.now() - validationStartTime;
+        logger_1.logger.debug(`[ES-SEARCH-${operationId}] Index validation completed in ${validationTime}ms`);
         try {
-            const startTime = Date.now();
+            const searchStartTime = Date.now();
+            logger_1.logger.info(`[ES-SEARCH-${operationId}] Executing Elasticsearch search`, {
+                operationId,
+                host: this.config.host,
+                indexes: requestedIndexes,
+                query: JSON.stringify(params.query),
+            });
             const response = await this.client.search({
                 index: params.index,
                 body: {
@@ -97,11 +129,15 @@ class ElasticsearchService {
                     _source: params._source,
                 },
             });
-            const executionTime = Date.now() - startTime;
-            logger_1.logger.info(`Elasticsearch query executed in ${executionTime}ms`, {
-                index: params.index,
-                took: response.took,
+            const searchTime = Date.now() - searchStartTime;
+            const totalTime = Date.now() - operationStartTime;
+            logger_1.logger.info(`[ES-SEARCH-${operationId}] Elasticsearch search completed successfully`, {
+                operationId,
+                searchTime: `${searchTime}ms`,
+                totalTime: `${totalTime}ms`,
+                esTook: `${response.took}ms`,
                 hits: typeof response.hits.total === 'number' ? response.hits.total : response.hits.total?.value || 0,
+                shards: response._shards,
             });
             const transformedResponse = {
                 ...response,
@@ -113,7 +149,15 @@ class ElasticsearchService {
             return transformedResponse;
         }
         catch (error) {
-            logger_1.logger.error('Elasticsearch search failed:', error);
+            const errorTime = Date.now() - operationStartTime;
+            logger_1.logger.error(`[ES-SEARCH-${operationId}] Elasticsearch search failed after ${errorTime}ms`, {
+                operationId,
+                error: error instanceof Error ? error.message : String(error),
+                host: this.config.host,
+                indexes: requestedIndexes,
+                errorType: error instanceof Error ? error.name : 'UnknownError',
+                statusCode: error?.meta?.statusCode,
+            });
             throw error;
         }
     }
@@ -131,17 +175,84 @@ class ElasticsearchService {
         }
     }
     async getIndicesStats() {
-        if (!this.client)
+        const operationStartTime = Date.now();
+        const operationId = Math.random().toString(36).substr(2, 9);
+        logger_1.logger.info(`[ES-STATS-${operationId}] Starting indices stats operation`, {
+            operationId,
+            configuredIndexes: this.config.allowedIndexes,
+        });
+        if (!this.client) {
+            logger_1.logger.error(`[ES-STATS-${operationId}] Elasticsearch client not initialized`);
             throw new Error('Elasticsearch client not initialized');
+        }
         try {
+            const existingIndexes = [];
+            const checkStartTime = Date.now();
+            logger_1.logger.info(`[ES-STATS-${operationId}] Checking existence of ${this.config.allowedIndexes.length} configured indexes`);
+            for (const index of this.config.allowedIndexes) {
+                const indexCheckStart = Date.now();
+                try {
+                    logger_1.logger.debug(`[ES-STATS-${operationId}] Checking existence of index: ${index}`);
+                    const exists = await this.client.indices.exists({ index });
+                    const indexCheckTime = Date.now() - indexCheckStart;
+                    if (exists) {
+                        existingIndexes.push(index);
+                        logger_1.logger.info(`[ES-STATS-${operationId}] Index '${index}' exists (checked in ${indexCheckTime}ms)`);
+                    }
+                    else {
+                        logger_1.logger.warn(`[ES-STATS-${operationId}] Index '${index}' does not exist (checked in ${indexCheckTime}ms)`);
+                    }
+                }
+                catch (error) {
+                    const indexCheckTime = Date.now() - indexCheckStart;
+                    logger_1.logger.warn(`[ES-STATS-${operationId}] Failed to check existence of index '${index}' after ${indexCheckTime}ms:`, {
+                        error: error instanceof Error ? error.message : String(error),
+                        errorType: error instanceof Error ? error.name : 'UnknownError',
+                        statusCode: error?.meta?.statusCode,
+                    });
+                }
+            }
+            const checkTime = Date.now() - checkStartTime;
+            logger_1.logger.info(`[ES-STATS-${operationId}] Index existence check completed in ${checkTime}ms`, {
+                operationId,
+                totalConfigured: this.config.allowedIndexes.length,
+                existingCount: existingIndexes.length,
+                existingIndexes,
+            });
+            if (existingIndexes.length === 0) {
+                const totalTime = Date.now() - operationStartTime;
+                logger_1.logger.warn(`[ES-STATS-${operationId}] No existing indexes found, returning empty stats after ${totalTime}ms`);
+                return { indices: {} };
+            }
+            const statsStartTime = Date.now();
+            logger_1.logger.info(`[ES-STATS-${operationId}] Getting stats for existing indexes`, {
+                operationId,
+                indexes: existingIndexes,
+            });
             const response = await this.client.indices.stats({
-                index: this.config.allowedIndexes.join(','),
+                index: existingIndexes.join(','),
                 metric: ['docs', 'store'],
+            });
+            const statsTime = Date.now() - statsStartTime;
+            const totalTime = Date.now() - operationStartTime;
+            logger_1.logger.info(`[ES-STATS-${operationId}] Indices stats completed successfully`, {
+                operationId,
+                statsTime: `${statsTime}ms`,
+                totalTime: `${totalTime}ms`,
+                indexCount: existingIndexes.length,
+                responseIndexes: Object.keys(response.indices || {}),
             });
             return response;
         }
         catch (error) {
-            logger_1.logger.error('Failed to get indices stats:', error);
+            const errorTime = Date.now() - operationStartTime;
+            logger_1.logger.error(`[ES-STATS-${operationId}] Failed to get indices stats after ${errorTime}ms`, {
+                operationId,
+                error: error instanceof Error ? error.message : String(error),
+                errorType: error instanceof Error ? error.name : 'UnknownError',
+                statusCode: error?.meta?.statusCode,
+                host: this.config.host,
+            });
             throw error;
         }
     }
@@ -162,15 +273,42 @@ class ElasticsearchService {
     getAllowedIndexes() {
         return [...this.config.allowedIndexes];
     }
+    getProjectIndexMapping() {
+        return { ...this.config.projectIndexMapping };
+    }
     async ping() {
-        if (!this.client)
+        const operationStartTime = Date.now();
+        const operationId = Math.random().toString(36).substr(2, 9);
+        logger_1.logger.info(`[ES-PING-${operationId}] Starting Elasticsearch ping operation`, {
+            operationId,
+            host: this.config?.host || 'unknown',
+        });
+        if (!this.client) {
+            logger_1.logger.warn(`[ES-PING-${operationId}] Elasticsearch client not initialized, returning false`);
             return false;
+        }
         try {
+            const pingStartTime = Date.now();
             await this.client.ping();
+            const pingTime = Date.now() - pingStartTime;
+            const totalTime = Date.now() - operationStartTime;
+            logger_1.logger.info(`[ES-PING-${operationId}] Elasticsearch ping successful`, {
+                operationId,
+                pingTime: `${pingTime}ms`,
+                totalTime: `${totalTime}ms`,
+                host: this.config.host,
+            });
             return true;
         }
         catch (error) {
-            logger_1.logger.error('Elasticsearch ping failed:', error);
+            const errorTime = Date.now() - operationStartTime;
+            logger_1.logger.error(`[ES-PING-${operationId}] Elasticsearch ping failed after ${errorTime}ms`, {
+                operationId,
+                error: error instanceof Error ? error.message : String(error),
+                errorType: error instanceof Error ? error.name : 'UnknownError',
+                statusCode: error?.meta?.statusCode,
+                host: this.config?.host || 'unknown',
+            });
             return false;
         }
     }

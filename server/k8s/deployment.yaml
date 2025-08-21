@@ -1,0 +1,73 @@
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: dhr-backend
+  namespace: es-upgrade
+  labels:
+    app: dhr-backend
+spec:
+  replicas: 1
+  selector:
+    matchLabels:
+      app: dhr-backend
+  template:
+    metadata:
+      labels:
+        app: dhr-backend
+    spec:
+      containers:
+      - name: dhr-backend
+        image: dhr-backend:latest
+        imagePullPolicy: Never
+        ports:
+        - containerPort: 3001
+        env:
+        - name: NODE_ENV
+          value: "production"
+        - name: PORT
+          value: "3001"
+        - name: ELASTICSEARCH_HOST
+          value: "http://elasticsearch-master.es-upgrade.svc.cluster.local:9200"
+        - name: ELASTICSEARCH_USERNAME
+          valueFrom:
+            configMapKeyRef:
+              name: dhr-config
+              key: elasticsearch-username
+        - name: ELASTICSEARCH_PASSWORD
+          valueFrom:
+            secretKeyRef:
+              name: dhr-secrets
+              key: elasticsearch-password
+        - name: ALLOWED_HEALTH_INDEXES
+          valueFrom:
+            configMapKeyRef:
+              name: dhr-config
+              key: allowed-health-indexes
+        - name: PROJECT_INDEX_MAPPING
+          valueFrom:
+            configMapKeyRef:
+              name: dhr-config
+              key: project-index-mapping
+        - name: CORS_ORIGINS
+          value: "*"
+        - name: LOG_LEVEL
+          value: "info"
+        livenessProbe:
+          httpGet:
+            path: /health
+            port: 3001
+          initialDelaySeconds: 30
+          periodSeconds: 10
+        readinessProbe:
+          httpGet:
+            path: /health
+            port: 3001
+          initialDelaySeconds: 5
+          periodSeconds: 5
+        resources:
+          requests:
+            memory: "256Mi"
+            cpu: "250m"
+          limits:
+            memory: "512Mi"
+            cpu: "500m"

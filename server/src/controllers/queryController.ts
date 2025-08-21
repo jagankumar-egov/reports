@@ -7,16 +7,50 @@ import { AppError } from '../middleware/errorHandler';
 
 export class QueryController {
   async executeQuery(req: Request, res: Response): Promise<void> {
-    const startTime = Date.now();
+    const requestStartTime = Date.now();
+    const requestId = Math.random().toString(36).substr(2, 9);
     const { jql, startAt = 0, maxResults = 50, fields }: QueryRequest = req.body;
+
+    logger.info(`[API-QUERY-${requestId}] Starting query execution`, {
+      requestId,
+      jql,
+      startAt,
+      maxResults,
+      fields: fields ? fields.length : 'all',
+      userAgent: req.get('User-Agent'),
+      ip: req.ip,
+    });
 
     try {
       // Get allowed indexes
+      const indexStartTime = Date.now();
       const allowedIndexes = elasticsearchService.getAllowedIndexes();
+      const indexTime = Date.now() - indexStartTime;
+      
+      logger.info(`[API-QUERY-${requestId}] Retrieved allowed indexes in ${indexTime}ms`, {
+        requestId,
+        allowedIndexes,
+        count: allowedIndexes.length,
+      });
 
       // Validate JQL
+      const validationStartTime = Date.now();
       const validation = jqlConverterService.validateJQL(jql, allowedIndexes);
+      const validationTime = Date.now() - validationStartTime;
+      
+      logger.info(`[API-QUERY-${requestId}] JQL validation completed in ${validationTime}ms`, {
+        requestId,
+        isValid: validation.isValid,
+        errorCount: validation.errors.length,
+        warningCount: validation.warnings.length,
+      });
+
       if (!validation.isValid) {
+        const totalTime = Date.now() - requestStartTime;
+        logger.warn(`[API-QUERY-${requestId}] JQL validation failed after ${totalTime}ms`, {
+          requestId,
+          errors: validation.errors,
+        });
         throw new AppError(
           `Invalid JQL: ${validation.errors.map(e => e.message).join(', ')}`,
           400,
@@ -25,9 +59,23 @@ export class QueryController {
       }
 
       // Convert JQL to Elasticsearch query
+      const conversionStartTime = Date.now();
       const { query, indexes, sort } = jqlConverterService.convertJQLToElasticsearch(jql, allowedIndexes);
+      const conversionTime = Date.now() - conversionStartTime;
+      
+      logger.info(`[API-QUERY-${requestId}] JQL to Elasticsearch conversion completed in ${conversionTime}ms`, {
+        requestId,
+        resultingIndexes: indexes,
+        queryType: query?.bool ? 'bool' : query?.match_all ? 'match_all' : 'other',
+        hasSorting: !!sort,
+      });
 
       if (indexes.length === 0) {
+        const totalTime = Date.now() - requestStartTime;
+        logger.warn(`[API-QUERY-${requestId}] No accessible indexes found after ${totalTime}ms`, {
+          requestId,
+          allowedIndexes,
+        });
         throw new AppError('No accessible indexes found for this query', 403, 'NO_INDEXES');
       }
 
@@ -41,9 +89,30 @@ export class QueryController {
         _source: fields || true,
       };
 
+      logger.info(`[API-QUERY-${requestId}] Executing Elasticsearch search`, {
+        requestId,
+        searchParams: {
+          indexes: searchParams.index,
+          from: searchParams.from,
+          size: searchParams.size,
+          hasSort: !!searchParams.sort,
+          sourceFields: Array.isArray(searchParams._source) ? searchParams._source.length : searchParams._source,
+        },
+      });
+
+      const searchStartTime = Date.now();
       const esResponse = await elasticsearchService.search(searchParams);
+      const searchTime = Date.now() - searchStartTime;
+      
+      logger.info(`[API-QUERY-${requestId}] Elasticsearch search completed in ${searchTime}ms`, {
+        requestId,
+        took: esResponse.took,
+        hits: typeof esResponse.hits.total === 'number' ? esResponse.hits.total : esResponse.hits.total?.value || 0,
+        shards: esResponse._shards,
+      });
 
       // Transform results
+      const transformStartTime = Date.now();
       const issues: HealthRecord[] = esResponse.hits.hits.map(hit => ({
         id: hit._id,
         index: hit._index,
@@ -51,24 +120,50 @@ export class QueryController {
         score: hit._score,
         fields: hit._source,
       }));
+      const transformTime = Date.now() - transformStartTime;
+      
+      logger.info(`[API-QUERY-${requestId}] Result transformation completed in ${transformTime}ms`, {
+        requestId,
+        hitCount: esResponse.hits.hits.length,
+        transformedCount: issues.length,
+      });
 
       // Get field definitions (simplified for Phase 1)
+      const fieldStartTime = Date.now();
       const fieldDefinitions = await this.getFieldDefinitionsForIndexes(indexes);
+      const fieldTime = Date.now() - fieldStartTime;
+      
+      logger.info(`[API-QUERY-${requestId}] Field definitions retrieved in ${fieldTime}ms`, {
+        requestId,
+        fieldCount: fieldDefinitions.length,
+        indexes,
+      });
 
+      const totalExecutionTime = Date.now() - requestStartTime;
       const result: QueryResult = {
         total: esResponse.hits.total.value,
         startAt,
         maxResults,
         issues,
         fields: fieldDefinitions,
-        executionTime: Date.now() - startTime,
+        executionTime: totalExecutionTime,
       };
 
-      logger.info('Query executed successfully', {
+      logger.info(`[API-QUERY-${requestId}] Query executed successfully in ${totalExecutionTime}ms`, {
+        requestId,
         jql,
         indexes,
         totalHits: result.total,
         returnedHits: issues.length,
+        timingBreakdown: {
+          indexRetrieval: `${indexTime}ms`,
+          validation: `${validationTime}ms`,
+          conversion: `${conversionTime}ms`,
+          search: `${searchTime}ms`,
+          transform: `${transformTime}ms`,
+          fieldDefinitions: `${fieldTime}ms`,
+          total: `${totalExecutionTime}ms`,
+        },
         executionTime: result.executionTime,
       });
 
@@ -84,7 +179,16 @@ export class QueryController {
 
       res.json(response);
     } catch (error) {
-      logger.error('Query execution failed:', error);
+      const errorTime = Date.now() - requestStartTime;
+      logger.error(`[API-QUERY-${requestId}] Query execution failed after ${errorTime}ms`, {
+        requestId,
+        error: error instanceof Error ? error.message : String(error),
+        errorType: error instanceof Error ? error.name : 'UnknownError',
+        statusCode: (error as any)?.statusCode,
+        jql,
+        userAgent: req.get('User-Agent'),
+        ip: req.ip,
+      });
       throw error;
     }
   }

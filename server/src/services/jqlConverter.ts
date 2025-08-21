@@ -1,7 +1,9 @@
 import { logger } from '../utils/logger';
 import { JQLQuery, QueryCondition, QueryValidationResult } from '../types';
+import { elasticsearchService } from './elasticsearch';
 
 class JQLConverterService {
+  private esService = elasticsearchService;
   /**
    * Convert JQL string to Elasticsearch query
    */
@@ -253,13 +255,8 @@ class JQLConverterService {
       return allowedIndexes; // Return all allowed indexes if no project specified
     }
 
-    // Map project names to index names (this mapping should be configurable)
-    const projectToIndexMap: Record<string, string> = {
-      'patients': 'health-data-patients',
-      'visits': 'health-data-visits',
-      'treatments': 'health-data-treatments',
-      'outcomes': 'health-data-outcomes',
-    };
+    // Get project to index mapping from configuration
+    const projectToIndexMap = this.esService.getProjectIndexMapping();
 
     const requestedIndexes = parsedJQL.projects.map(project => {
       const indexName = projectToIndexMap[project.toLowerCase()] || project;

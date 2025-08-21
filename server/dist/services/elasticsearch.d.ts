@@ -17,6 +17,7 @@ declare class ElasticsearchService {
     getIndicesStats(): Promise<any>;
     private validateIndexAccess;
     getAllowedIndexes(): string[];
+    getProjectIndexMapping(): Record<string, string>;
     ping(): Promise<boolean>;
 }
 export declare const elasticsearchService: ElasticsearchService;

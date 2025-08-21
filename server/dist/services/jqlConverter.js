@@ -2,7 +2,11 @@
 Object.defineProperty(exports, "__esModule", { value: true });
 exports.jqlConverterService = void 0;
 const logger_1 = require("../utils/logger");
+const elasticsearch_1 = require("./elasticsearch");
 class JQLConverterService {
+    constructor() {
+        this.esService = elasticsearch_1.elasticsearchService;
+    }
     convertJQLToElasticsearch(jql, allowedIndexes) {
         try {
             const parsedJQL = this.parseJQL(jql);
@@ -177,12 +181,7 @@ class JQLConverterService {
         if (!parsedJQL.projects || parsedJQL.projects.length === 0) {
             return allowedIndexes;
         }
-        const projectToIndexMap = {
-            'patients': 'health-data-patients',
-            'visits': 'health-data-visits',
-            'treatments': 'health-data-treatments',
-            'outcomes': 'health-data-outcomes',
-        };
+        const projectToIndexMap = this.esService.getProjectIndexMapping();
         const requestedIndexes = parsedJQL.projects.map(project => {
             const indexName = projectToIndexMap[project.toLowerCase()] || project;
             return indexName;

@@ -1,5 +1,6 @@
 import { QueryValidationResult } from '../types';
 declare class JQLConverterService {
+    private esService;
     convertJQLToElasticsearch(jql: string, allowedIndexes: string[]): {
         query: any;
         indexes: string[];

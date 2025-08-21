@@ -64,6 +64,7 @@ export interface ElasticsearchConfig {
     password: string;
     caCert?: string;
     allowedIndexes: string[];
+    projectIndexMapping: Record<string, string>;
     requestTimeout: number;
     maxRetries: number;
 }
