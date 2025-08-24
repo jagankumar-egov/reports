@@ -157,6 +157,7 @@ npm run build
 ## Features
 
 - **Direct Query Interface**: Monaco editor with Elasticsearch query support
+- **URL Parameter Filtering**: Automatic query generation from URL parameters
 - **Dynamic Query Guidelines**: Configurable query examples and help
 - **Data Visualization**: Interactive charts and tables
 - **Export Functionality**: Excel export capabilities
@@ -217,6 +218,55 @@ The query guidelines are now configurable via JSON. Edit `client/src/configs/que
   "tips": "💡 Tip: Modify field names to match your index schema."
 }
 ```
+
+### URL Parameter Filtering
+
+The Direct Query interface now supports automatic filter generation from URL parameters. This enables deep linking and pre-configured queries.
+
+#### Supported URL Parameters:
+
+**Common Filters:**
+- `status=active` → Adds term filter on `status.keyword` field
+- `project=myproject` → Adds term filter on `project.keyword` field  
+- `user_id=123` → Adds term filter on `user_id` field
+- `search=keyword` → Adds match query on `_all` fields
+
+**Date Range Filters:**
+- `date_from=2024-01-01&date_to=2024-12-31` → Adds range filter on `created_at` field
+
+**Custom Filters:**
+- `filter_customfield=value` → Adds term filter on `customfield`
+- `filter_data={"field":"name","operator":"wildcard","value":"*john*","type":"wildcard"}` → Complex filter as JSON
+
+#### Example URLs:
+
+```
+# Filter by status
+/direct-query?status=active
+
+# Filter by project and user
+/direct-query?project=health&user_id=123
+
+# Date range filter
+/direct-query?date_from=2024-01-01&date_to=2024-12-31
+
+# Multiple filters with search
+/direct-query?status=active&project=health&search=patient
+
+# Custom field filter
+/direct-query?filter_department=cardiology
+
+# Complex custom filter
+/direct-query?filter_priority={"field":"priority","operator":"range","value":"1 TO 5","type":"range","label":"Priority: High"}
+```
+
+#### Filter Behavior:
+
+1. **Automatic Query Generation**: When URL parameters are detected, the system automatically generates an Elasticsearch query
+2. **Visual Filter Display**: Applied filters are shown as removable chips above the query editor
+3. **Manual Override**: Users can still edit the generated query manually
+4. **Filter Management**: Individual filters can be removed or all filters can be cleared
+5. **Query Refresh**: Filters can be refreshed to regenerate the query
 
 ## Contributing
 

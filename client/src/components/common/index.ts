@@ -8,5 +8,6 @@ export { default as ErrorDisplay } from './ErrorDisplay';
 export { default as AggregationsDisplay } from './AggregationsDisplay';
 export { default as ErrorBoundary } from './ErrorBoundary';
 export { default as LoadingSpinner } from './LoadingSpinner';
+export { default as ShareableLink } from './ShareableLink';
 
 export type { TableRow, TableColumn } from './DataTable';

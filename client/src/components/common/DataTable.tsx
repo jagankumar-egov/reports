@@ -74,10 +74,10 @@ const DataTable: React.FC<DataTableProps> = ({
   };
 
   const shouldShowTooltip = (cellValue: string, rawValue: any) => {
-    return cellValue.length > 30 || typeof rawValue === 'object';
+    return cellValue && (cellValue.length > 30 || typeof rawValue === 'object');
   };
 
-  if (rows.length === 0 && !loading) {
+  if (!rows || rows.length === 0 && !loading) {
     return (
       <Box sx={{ textAlign: 'center', py: 4 }}>
         <Typography color="text.secondary">

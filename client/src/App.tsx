@@ -13,6 +13,7 @@ import ErrorBoundary from '@/components/common/ErrorBoundary';
 
 // Page components
 import DirectQueryPage from '@/pages/DirectQueryPage';
+import AutoQueryPage from '@/pages/AutoQueryPage';
 import LoadingSpinner from '@/components/common/LoadingSpinner';
 
 const App: React.FC = () => {
@@ -93,6 +94,9 @@ const App: React.FC = () => {
             
             {/* Phase 1: Direct Elasticsearch Query */}
             <Route path="/direct-query" element={<DirectQueryPage />} />
+            
+            {/* Auto Query with URL Parameters */}
+            <Route path="/auto-query" element={<AutoQueryPage />} />
             
             {/* Catch-all route */}
             <Route path="*" element={<Navigate to="/direct-query" replace />} />

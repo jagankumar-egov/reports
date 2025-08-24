@@ -37,7 +37,7 @@ const IndexSelector: React.FC<IndexSelectorProps> = ({
           label={label}
           onChange={(e) => onIndexChange(e.target.value)}
         >
-          {availableIndexes.map((index) => (
+          {(availableIndexes || []).map((index) => (
             <MenuItem key={index} value={index}>
               {index}
             </MenuItem>

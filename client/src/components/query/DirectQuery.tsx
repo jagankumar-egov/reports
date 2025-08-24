@@ -10,7 +10,8 @@ import {
   Divider,
   Grid,
   CircularProgress,
-  Chip,
+  IconButton,
+  Tooltip,
 } from '@mui/material';
 import {
   PlayArrow as ExecuteIcon,
@@ -30,6 +31,7 @@ import {
   ErrorDisplay,
   AggregationsDisplay,
   TableRow,
+  ShareableLink,
 } from '@/components/common';
 
 import { DirectQueryRequest, DirectQueryResponse, ElasticsearchHit } from '@/types';
@@ -66,7 +68,7 @@ const DirectQuery: React.FC = () => {
   const [lastQueryWasFiltered, setLastQueryWasFiltered] = useState<boolean>(false);
   const [columnFilterOpen, setColumnFilterOpen] = useState(false);
   const [columnAnchorEl, setColumnAnchorEl] = useState<HTMLButtonElement | null>(null);
-  
+
 
   // Load available indexes on mount
   useEffect(() => {
@@ -75,6 +77,7 @@ const DirectQuery: React.FC = () => {
         setIndexesLoading(true);
         const indexes = await directQueryAPI.getIndexes();
         setAvailableIndexes(indexes);
+        
         if (indexes.length > 0 && !selectedIndex) {
           setSelectedIndex(indexes[0]);
         }
@@ -204,11 +207,15 @@ const DirectQuery: React.FC = () => {
         }
       }
       
+      // Extract from and size from the parsed query if they exist
+      const queryFrom = parsedQuery.from !== undefined ? parsedQuery.from : from;
+      const querySize = parsedQuery.size !== undefined ? parsedQuery.size : size;
+      
       const request: DirectQueryRequest = {
         index: selectedIndex,
         query: parsedQuery,
-        from,
-        size,
+        from: queryFrom,
+        size: querySize,
         _source: sourceFilter,
       };
 
@@ -450,6 +457,7 @@ const DirectQuery: React.FC = () => {
         Direct Elasticsearch Query
       </Typography>
       
+      
       <Grid container spacing={3}>
         {/* Query Input Section */}
         <Grid item xs={12}>
@@ -527,6 +535,16 @@ const DirectQuery: React.FC = () => {
                     >
                       Clear Results
                     </Button>
+                    
+                    <ShareableLink
+                      index={selectedIndex}
+                      query={queryText}
+                      from={from}
+                      size={size}
+                      autoExecute={true}
+                      buttonVariant="outlined"
+                      buttonSize="large"
+                    />
                     
                     {result && rows.length > 0 && (
                       <ExportActions
