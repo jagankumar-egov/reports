@@ -1,0 +1,603 @@
+openapi: 3.0.3
+info:
+  title: DHR Multi-Index Join API
+  description: |
+    API specification for the Data Health Reports (DHR) Multi-Index Join functionality.
+    
+    This API enables cross-index data joining operations on Elasticsearch indices,
+    providing SQL-like join capabilities for analytical workloads.
+    
+    ## Features
+    - Four join types: Inner, Left, Right, Full Outer
+    - Dynamic field discovery from Elasticsearch mappings
+    - Real-time join preview and compatibility checking
+    - Paginated result sets with configurable limits
+    - In-memory join processing for up to 1000 records per index
+    
+    ## Authentication
+    Currently uses session-based authentication. Future versions will support API keys.
+    
+  version: 1.0.0
+  contact:
+    name: DHR Development Team
+    email: dhr-dev@example.com
+  license:
+    name: MIT
+    url: https://opensource.org/licenses/MIT
+
+servers:
+  - url: http://localhost:3000/api
+    description: Local development server
+  - url: https://dhr-api.example.com/api
+    description: Production server
+
+paths:
+  /multi-index-join/preview:
+    get:
+      summary: Preview multi-index join compatibility
+      description: |
+        Test join compatibility between two indices using specified fields.
+        Returns sample data and statistics without performing a full join operation.
+        
+        This endpoint is useful for:
+        - Validating join field compatibility
+        - Understanding data distribution
+        - Previewing expected join results
+        
+      tags:
+        - Multi-Index Join
+      parameters:
+        - name: leftIndex
+          in: query
+          required: true
+          description: Name of the left index for the join operation
+          schema:
+            type: string
+            example: "project-index-v1"
+        - name: rightIndex
+          in: query
+          required: true
+          description: Name of the right index for the join operation
+          schema:
+            type: string
+            example: "project-task-index-v1"
+        - name: leftField
+          in: query
+          required: true
+          description: Field path from left index to join on (supports nested fields)
+          schema:
+            type: string
+            example: "Data.projectId"
+        - name: rightField
+          in: query
+          required: true
+          description: Field path from right index to join on (supports nested fields)
+          schema:
+            type: string
+            example: "Data.projectId"
+      responses:
+        200:
+          description: Join preview generated successfully
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/JoinPreviewResponse'
+              example:
+                success: true
+                data:
+                  joinSummary:
+                    leftIndexTotal: 6
+                    rightIndexTotal: 3
+                    joinedRecords: 0
+                    leftOnlyRecords: 6
+                    rightOnlyRecords: 3
+                  preview:
+                    - joinKey: "P001"
+                      joinType: "left_only"
+                      leftRecord:
+                        Data:
+                          projectId: "P001"
+                          projectName: "Health Campaign 2024"
+                      rightRecord: null
+                  sampleJoinKeys:
+                    P001: 1
+                    P002: 1
+        400:
+          description: Invalid request parameters
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+              example:
+                success: false
+                error:
+                  code: "INVALID_PARAMETERS"
+                  message: "Missing required parameter: leftIndex"
+        404:
+          description: Index not found
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+              example:
+                success: false
+                error:
+                  code: "INDEX_NOT_FOUND"
+                  message: "Index 'invalid-index' does not exist"
+        500:
+          description: Internal server error
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+
+  /multi-index-join:
+    post:
+      summary: Execute multi-index join operation
+      description: |
+        Perform a full multi-index join operation with specified configuration.
+        Supports multiple join types and returns paginated results.
+        
+        ## Join Types
+        - **inner**: Only records with matches in both indices
+        - **left**: All records from left index, with matches from right where available
+        - **right**: All records from right index, with matches from left where available
+        - **full**: All records from both indices, matched where possible
+        
+        ## Limits
+        - Maximum 1000 records per index for join processing
+        - Maximum 1000 results per request (use pagination for larger datasets)
+        
+      tags:
+        - Multi-Index Join
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/MultiIndexJoinRequest'
+            example:
+              joins:
+                - leftIndex: "project-index-v1"
+                  rightIndex: "project-task-index-v1"
+                  joinField:
+                    left: "Data.projectId"
+                    right: "Data.projectId"
+                  joinType: "full"
+                  limit: 1000
+              from: 0
+              size: 50
+      responses:
+        200:
+          description: Join executed successfully
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/MultiIndexJoinResponse'
+              example:
+                success: true
+                data:
+                  totalResults: 9
+                  results:
+                    - joinKey: "P001"
+                      joinType: "left_only"
+                      leftRecord:
+                        Data:
+                          projectId: "P001"
+                          projectName: "Health Campaign 2024"
+                          status: "active"
+                      rightRecord: null
+                    - joinKey: "TASK001"
+                      joinType: "right_only"
+                      leftRecord: null
+                      rightRecord:
+                        Data:
+                          projectId: "TASK001"
+                          taskName: "Survey Collection"
+                          status: "completed"
+                  joinSummary:
+                    leftIndexTotal: 6
+                    rightIndexTotal: 3
+                    joinedRecords: 0
+                    leftOnlyRecords: 6
+                    rightOnlyRecords: 3
+        400:
+          description: Invalid request body
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+              example:
+                success: false
+                error:
+                  code: "INVALID_JOIN_CONFIG"
+                  message: "Invalid join type: 'invalid'. Must be one of: inner, left, right, full"
+        413:
+          description: Request too large (exceeds processing limits)
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+              example:
+                success: false
+                error:
+                  code: "LIMIT_EXCEEDED"
+                  message: "Index contains more than 1000 records. Please refine your query or contact support for large dataset processing."
+        500:
+          description: Internal server error
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+
+  /direct-query/indexes/{indexName}/mapping:
+    get:
+      summary: Get Elasticsearch index field mapping
+      description: |
+        Retrieve the field mapping structure for a specific Elasticsearch index.
+        Used by the multi-index join interface for dynamic field discovery.
+        
+        Returns the complete Elasticsearch mapping with field types, which is then
+        processed to extract available fields for join operations.
+        
+      tags:
+        - Field Discovery
+      parameters:
+        - name: indexName
+          in: path
+          required: true
+          description: Name of the Elasticsearch index
+          schema:
+            type: string
+            example: "project-index-v1"
+      responses:
+        200:
+          description: Index mapping retrieved successfully
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/IndexMappingResponse'
+              example:
+                success: true
+                data:
+                  project-index-v1:
+                    mappings:
+                      properties:
+                        Data:
+                          properties:
+                            projectId:
+                              type: "keyword"
+                            projectName:
+                              type: "text"
+                              fields:
+                                keyword:
+                                  type: "keyword"
+                            boundaryHierarchy:
+                              properties:
+                                country:
+                                  type: "text"
+                                  fields:
+                                    keyword:
+                                      type: "keyword"
+                                state:
+                                  type: "text"
+                                  fields:
+                                    keyword:
+                                      type: "keyword"
+                        id:
+                          type: "keyword"
+                        timestamp:
+                          type: "date"
+        404:
+          description: Index not found
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+        500:
+          description: Internal server error
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+
+components:
+  schemas:
+    JoinPreviewResponse:
+      type: object
+      required:
+        - success
+        - data
+      properties:
+        success:
+          type: boolean
+          example: true
+        data:
+          type: object
+          required:
+            - joinSummary
+            - preview
+            - sampleJoinKeys
+          properties:
+            joinSummary:
+              $ref: '#/components/schemas/JoinSummary'
+            preview:
+              type: array
+              description: Sample of joined records for preview
+              items:
+                $ref: '#/components/schemas/JoinedRecord'
+            sampleJoinKeys:
+              type: object
+              description: Distribution of join keys found in the data
+              additionalProperties:
+                type: integer
+              example:
+                P001: 1
+                P002: 1
+                TASK001: 1
+
+    MultiIndexJoinRequest:
+      type: object
+      required:
+        - joins
+      properties:
+        joins:
+          type: array
+          description: Array of join configurations (currently supports single join)
+          minItems: 1
+          maxItems: 1
+          items:
+            $ref: '#/components/schemas/JoinConfiguration'
+        from:
+          type: integer
+          description: Pagination offset
+          minimum: 0
+          default: 0
+          example: 0
+        size:
+          type: integer
+          description: Number of results to return
+          minimum: 1
+          maximum: 1000
+          default: 50
+          example: 50
+
+    MultiIndexJoinResponse:
+      type: object
+      required:
+        - success
+        - data
+      properties:
+        success:
+          type: boolean
+          example: true
+        data:
+          type: object
+          required:
+            - totalResults
+            - results
+            - joinSummary
+          properties:
+            totalResults:
+              type: integer
+              description: Total number of joined records
+              example: 9
+            results:
+              type: array
+              description: Array of joined records
+              items:
+                $ref: '#/components/schemas/JoinedRecord'
+            joinSummary:
+              $ref: '#/components/schemas/JoinSummary'
+
+    JoinConfiguration:
+      type: object
+      required:
+        - leftIndex
+        - rightIndex
+        - joinField
+        - joinType
+      properties:
+        leftIndex:
+          type: string
+          description: Name of the left index for joining
+          example: "project-index-v1"
+        rightIndex:
+          type: string
+          description: Name of the right index for joining
+          example: "project-task-index-v1"
+        joinField:
+          type: object
+          required:
+            - left
+            - right
+          properties:
+            left:
+              type: string
+              description: Field path from left index to join on (supports nested fields)
+              example: "Data.projectId"
+            right:
+              type: string
+              description: Field path from right index to join on (supports nested fields)
+              example: "Data.projectId"
+        joinType:
+          type: string
+          enum: [inner, left, right, full]
+          description: Type of join operation
+          example: "full"
+        limit:
+          type: integer
+          description: Maximum records to fetch from each index for joining
+          minimum: 1
+          maximum: 1000
+          default: 1000
+          example: 1000
+
+    JoinedRecord:
+      type: object
+      required:
+        - joinKey
+        - joinType
+      properties:
+        joinKey:
+          type: string
+          description: The value that was used to join the records
+          example: "P001"
+        joinType:
+          type: string
+          enum: [matched, left_only, right_only]
+          description: |
+            Type of join result:
+            - matched: Record exists in both indices
+            - left_only: Record exists only in left index
+            - right_only: Record exists only in right index
+          example: "left_only"
+        leftRecord:
+          type: object
+          nullable: true
+          description: Record from left index (null if not present)
+          additionalProperties: true
+        rightRecord:
+          type: object
+          nullable: true
+          description: Record from right index (null if not present)
+          additionalProperties: true
+
+    JoinSummary:
+      type: object
+      required:
+        - leftIndexTotal
+        - rightIndexTotal
+        - joinedRecords
+        - leftOnlyRecords
+        - rightOnlyRecords
+      properties:
+        leftIndexTotal:
+          type: integer
+          description: Total records in left index
+          example: 6
+        rightIndexTotal:
+          type: integer
+          description: Total records in right index
+          example: 3
+        joinedRecords:
+          type: integer
+          description: Number of records that matched between indices
+          example: 0
+        leftOnlyRecords:
+          type: integer
+          description: Number of records that exist only in left index
+          example: 6
+        rightOnlyRecords:
+          type: integer
+          description: Number of records that exist only in right index
+          example: 3
+
+    IndexMappingResponse:
+      type: object
+      required:
+        - success
+        - data
+      properties:
+        success:
+          type: boolean
+          example: true
+        data:
+          type: object
+          description: |
+            Elasticsearch index mapping response.
+            Key is the index name, value contains the mapping structure.
+          additionalProperties:
+            type: object
+            properties:
+              mappings:
+                type: object
+                properties:
+                  properties:
+                    type: object
+                    additionalProperties: true
+
+    ErrorResponse:
+      type: object
+      required:
+        - success
+        - error
+      properties:
+        success:
+          type: boolean
+          example: false
+        error:
+          type: object
+          required:
+            - code
+            - message
+          properties:
+            code:
+              type: string
+              description: Machine-readable error code
+              example: "INVALID_PARAMETERS"
+            message:
+              type: string
+              description: Human-readable error message
+              example: "Missing required parameter: leftIndex"
+            details:
+              type: string
+              description: Additional error details (optional)
+
+  responses:
+    BadRequest:
+      description: Bad request - invalid parameters or request body
+      content:
+        application/json:
+          schema:
+            $ref: '#/components/schemas/ErrorResponse'
+    
+    NotFound:
+      description: Resource not found
+      content:
+        application/json:
+          schema:
+            $ref: '#/components/schemas/ErrorResponse'
+    
+    InternalServerError:
+      description: Internal server error
+      content:
+        application/json:
+          schema:
+            $ref: '#/components/schemas/ErrorResponse'
+
+tags:
+  - name: Multi-Index Join
+    description: |
+      Operations for joining data across multiple Elasticsearch indices.
+      Provides SQL-like join capabilities for analytical workloads.
+  - name: Field Discovery
+    description: |
+      Operations for discovering field structures in Elasticsearch indices.
+      Used by the frontend for dynamic field selection interfaces.
+
+# API Usage Examples
+
+# Example 1: Preview a join between project and task indices
+# GET /api/multi-index-join/preview?leftIndex=project-index-v1&rightIndex=project-task-index-v1&leftField=Data.projectId&rightField=Data.projectId
+
+# Example 2: Execute a full outer join
+# POST /api/multi-index-join
+# Content-Type: application/json
+# {
+#   "joins": [{
+#     "leftIndex": "project-index-v1",
+#     "rightIndex": "project-task-index-v1",
+#     "joinField": {
+#       "left": "Data.projectId",
+#       "right": "Data.projectId"
+#     },
+#     "joinType": "full",
+#     "limit": 1000
+#   }],
+#   "from": 0,
+#   "size": 50
+# }
+
+# Example 3: Get field mapping for dynamic field discovery
+# GET /api/direct-query/indexes/project-index-v1/mapping

@@ -50,35 +50,49 @@ import { directQueryAPI } from '@/services/api';
 import { extractFieldsFromMapping } from '@/utils/mappingUtils';
 import { exportToExcel } from '@/utils/excelExport';
 
+/**
+ * Multi-Index Join Page Component
+ * 
+ * Provides a comprehensive interface for joining data from multiple Elasticsearch indices.
+ * Features include:
+ * - Cross-index data joining with four join types (Inner, Left, Right, Full)
+ * - Automatic field discovery with dropdown selectors
+ * - Real-time join preview with compatibility checking
+ * - Advanced table view with flattened column structure
+ * - Smart column merging and index differentiation
+ * - WYSIWYG Excel export with pagination support
+ * - Debounced requests to prevent API overload
+ */
 const MultiIndexJoinPage: React.FC = () => {
-  // Use shared hooks for index list
+  // Use shared hooks for index list - leveraging existing infrastructure
   const query = useElasticsearchQuery({
-    onResult: () => {}, // We don't need result handling here
+    onResult: () => {}, // We don't need result handling here, only index discovery
   });
 
+  // Custom hook for multi-index join operations
   const join = useMultiIndexJoin();
 
-  // Join configuration state
-  const [leftIndex, setLeftIndex] = useState('');
-  const [rightIndex, setRightIndex] = useState('');
-  const [leftField, setLeftField] = useState('');
-  const [rightField, setRightField] = useState('');
-  const [joinType, setJoinType] = useState<'inner' | 'left' | 'right' | 'full'>('inner');
-  const [from, setFrom] = useState(0);
-  const [size, setSize] = useState(50);
+  // Join configuration state - core settings for the join operation
+  const [leftIndex, setLeftIndex] = useState('');  // Source index for left side of join
+  const [rightIndex, setRightIndex] = useState(''); // Source index for right side of join
+  const [leftField, setLeftField] = useState('');   // Field from left index to join on
+  const [rightField, setRightField] = useState(''); // Field from right index to join on
+  const [joinType, setJoinType] = useState<'inner' | 'left' | 'right' | 'full'>('inner'); // SQL-style join type
+  const [from, setFrom] = useState(0);   // Pagination offset
+  const [size, setSize] = useState(50);  // Results per page
 
-  // Field mapping state
-  const [leftFields, setLeftFields] = useState<FieldInfo[]>([]);
-  const [rightFields, setRightFields] = useState<FieldInfo[]>([]);
-  const [fieldsLoading, setFieldsLoading] = useState({ left: false, right: false });
+  // Field mapping state - dynamic field discovery from Elasticsearch mappings
+  const [leftFields, setLeftFields] = useState<FieldInfo[]>([]);   // Available fields from left index
+  const [rightFields, setRightFields] = useState<FieldInfo[]>([]); // Available fields from right index
+  const [fieldsLoading, setFieldsLoading] = useState({ left: false, right: false }); // Loading states for field discovery
 
-  // Table view state
-  const [viewMode, setViewMode] = useState<'preview' | 'table'>('preview');
-  const [page, setPage] = useState(0);
-  const [rowsPerPage, setRowsPerPage] = useState(10);
-  const [mergeColumns, setMergeColumns] = useState(true);
-  const [exportAll, setExportAll] = useState(false);
-  const [exporting, setExporting] = useState(false);
+  // Table view state - advanced table display and export options
+  const [viewMode, setViewMode] = useState<'preview' | 'table'>('preview'); // Toggle between JSON preview and structured table
+  const [page, setPage] = useState(0);           // Current page in table pagination
+  const [rowsPerPage, setRowsPerPage] = useState(10); // Rows per page (5, 10, 25, 50)
+  const [mergeColumns, setMergeColumns] = useState(true); // Whether to merge common columns or show separately
+  const [exportAll, setExportAll] = useState(false);     // Export all data vs current page only
+  const [exporting, setExporting] = useState(false);     // Export operation in progress
 
   // Handle join preview
   const handlePreview = useCallback(async () => {
@@ -115,19 +129,24 @@ const MultiIndexJoinPage: React.FC = () => {
     await join.executeJoin(request);
   }, [leftIndex, rightIndex, leftField, rightField, joinType, from, size, join]);
 
-  // Load fields when indices change
+  /**
+   * Load available fields when left index changes
+   * Uses Elasticsearch mapping API to discover field structure dynamically
+   * This eliminates need for hardcoded field lists and adapts to any index schema
+   */
   useEffect(() => {
     if (leftIndex) {
       setFieldsLoading(prev => ({ ...prev, left: true }));
       directQueryAPI.getIndexMapping(leftIndex)
         .then(mappingResponse => {
-          // Extract the actual mapping from the response
-          // The response structure is: { "indexName": { "mappings": { ... } } }
+          // Extract the actual mapping from the nested response structure
+          // API returns: { "indexName": { "mappings": { "properties": { ... } } } }
           const indexMapping = mappingResponse[leftIndex];
           if (!indexMapping || !indexMapping.mappings) {
             throw new Error(`Invalid mapping structure for index: ${leftIndex}`);
           }
           
+          // Transform ES mapping into structured field information
           const fields = extractFieldsFromMapping(indexMapping);
           console.log(`✅ Loaded ${fields.length} fields for left index ${leftIndex}:`, fields.slice(0, 5).map(f => f.fullPath));
           setLeftFields(fields);
@@ -145,18 +164,23 @@ const MultiIndexJoinPage: React.FC = () => {
     }
   }, [leftIndex]);
 
+  /**
+   * Load available fields when right index changes
+   * Mirror of left index field loading with same dynamic discovery approach
+   */
   useEffect(() => {
     if (rightIndex) {
       setFieldsLoading(prev => ({ ...prev, right: true }));
       directQueryAPI.getIndexMapping(rightIndex)
         .then(mappingResponse => {
-          // Extract the actual mapping from the response
-          // The response structure is: { "indexName": { "mappings": { ... } } }
+          // Extract the actual mapping from the nested response structure
+          // API returns: { "indexName": { "mappings": { "properties": { ... } } } }
           const indexMapping = mappingResponse[rightIndex];
           if (!indexMapping || !indexMapping.mappings) {
             throw new Error(`Invalid mapping structure for index: ${rightIndex}`);
           }
           
+          // Transform ES mapping into structured field information
           const fields = extractFieldsFromMapping(indexMapping);
           console.log(`✅ Loaded ${fields.length} fields for right index ${rightIndex}:`, fields.slice(0, 5).map(f => f.fullPath));
           setRightFields(fields);
@@ -175,16 +199,22 @@ const MultiIndexJoinPage: React.FC = () => {
   }, [rightIndex]);
 
   // Auto-preview when all fields are filled (debounced to prevent excessive requests)
+  // This provides real-time compatibility checking without overwhelming the API
   useEffect(() => {
     if (leftIndex && rightIndex && leftField && rightField) {
+      // Debounce preview requests to prevent API storm when user is rapidly changing selections
       const timeoutId = setTimeout(() => {
         join.getPreview(leftIndex, rightIndex, leftField, rightField);
-      }, 500); // 500ms debounce
+      }, 500); // 500ms debounce - balance between responsiveness and API efficiency
       
-      return () => clearTimeout(timeoutId);
+      return () => clearTimeout(timeoutId); // Cleanup on dependency change
     }
   }, [leftIndex, rightIndex, leftField, rightField]);
 
+  /**
+   * Get human-readable description for join types
+   * Helps users understand SQL-style join behavior in Elasticsearch context
+   */
   const getJoinTypeDescription = (type: string) => {
     switch (type) {
       case 'inner': return 'Only records that have matches in both indices';
@@ -195,16 +225,23 @@ const MultiIndexJoinPage: React.FC = () => {
     }
   };
 
-  // Index colors for differentiation
+  /**
+   * Index colors for visual differentiation in table view
+   * Consistent color coding helps users identify data sources
+   */
   const getIndexColor = (indexName: string) => {
     const colors = {
-      [leftIndex]: '#1976d2', // Blue for left index
-      [rightIndex]: '#d32f2f', // Red for right index
+      [leftIndex]: '#1976d2', // Blue for left index - primary color
+      [rightIndex]: '#d32f2f', // Red for right index - secondary color
     };
-    return colors[indexName] || '#666';
+    return colors[indexName] || '#666'; // Default gray for unknown indices
   };
 
-  // Flatten nested object to get all field paths
+  /**
+   * Flatten nested object to get all field paths for table display
+   * Converts nested Elasticsearch documents into flat structure suitable for table columns
+   * Example: { Data: { location: { country: "USA" } } } -> { "Data.location.country": "USA" }
+   */
   const flattenObject = (obj: any, prefix = ''): Record<string, any> => {
     const flattened: Record<string, any> = {};
     
@@ -224,7 +261,11 @@ const MultiIndexJoinPage: React.FC = () => {
     return flattened;
   };
 
-  // Process joined data for table view
+  /**
+   * Process joined data for table view
+   * Converts raw join results into structured table format with proper column handling
+   * Supports both merged (common columns combined) and separated (all columns distinct) views
+   */
   const processTableData = (results: any[]) => {
     if (!results || results.length === 0) return { columns: [], rows: [] };
 
@@ -234,7 +275,8 @@ const MultiIndexJoinPage: React.FC = () => {
     const rightFieldPaths = new Set<string>();
     const commonFields = new Set<string>();
 
-    // First pass: collect all field paths
+    // First pass: collect all unique field paths from both indices
+    // This discovers the complete schema across all joined records
     results.forEach(record => {
       if (record.leftRecord) {
         const flattened = flattenObject(record.leftRecord);
@@ -252,7 +294,8 @@ const MultiIndexJoinPage: React.FC = () => {
       }
     });
 
-    // Identify common fields
+    // Identify common fields that exist in both indices
+    // These can be merged into single columns or displayed separately
     leftFieldPaths.forEach(field => {
       if (rightFieldPaths.has(field)) {
         commonFields.add(field);
@@ -278,7 +321,8 @@ const MultiIndexJoinPage: React.FC = () => {
     });
 
     if (mergeColumns) {
-      // Merged columns for common fields
+      // Merged view: combine common fields into single columns
+      // This provides a cleaner, more consolidated view of the data
       [...commonFields].sort().forEach(field => {
         columns.push({
           id: field,
@@ -288,7 +332,8 @@ const MultiIndexJoinPage: React.FC = () => {
         });
       });
 
-      // Separate columns for unique fields from left index
+      // Add separate columns for fields unique to left index
+      // These fields have no counterpart in the right index
       [...leftFieldPaths].filter(field => !commonFields.has(field)).sort().forEach(field => {
         columns.push({
           id: `${leftIndex}.${field}`,
@@ -299,7 +344,8 @@ const MultiIndexJoinPage: React.FC = () => {
         });
       });
 
-      // Separate columns for unique fields from right index
+      // Add separate columns for fields unique to right index
+      // These fields have no counterpart in the left index
       [...rightFieldPaths].filter(field => !commonFields.has(field)).sort().forEach(field => {
         columns.push({
           id: `${rightIndex}.${field}`,
@@ -310,7 +356,8 @@ const MultiIndexJoinPage: React.FC = () => {
         });
       });
     } else {
-      // Separate columns for all fields with index prefixes
+      // Separated view: show all fields with index prefixes
+      // This provides complete visibility into data sources but creates more columns
       [...leftFieldPaths].sort().forEach(field => {
         columns.push({
           id: `${leftIndex}.${field}`,
@@ -332,7 +379,8 @@ const MultiIndexJoinPage: React.FC = () => {
       });
     }
 
-    // Create rows with flattened data
+    // Create table rows by flattening and mapping join result data
+    // Each row represents one joined record with proper column mapping
     const rows = results.map((record, index) => {
       const row: any = { id: index, _joinKey: record.joinKey || 'N/A' };
       
@@ -345,6 +393,7 @@ const MultiIndexJoinPage: React.FC = () => {
           // Skip, already set
         } else if (column.merged) {
           // For merged columns, prefer left record value, fallback to right
+          // This provides a unified view while preserving data priority
           const value = leftFlattened[column.field] ?? rightFlattened[column.field] ?? '';
           row[column.id] = formatCellValue(value);
         } else if (column.sourceIndex === leftIndex) {
@@ -362,7 +411,10 @@ const MultiIndexJoinPage: React.FC = () => {
     return { columns, rows };
   };
 
-  // Format cell value for display
+  /**
+   * Format cell value for display in table
+   * Handles various data types and ensures consistent string representation
+   */
   const formatCellValue = (value: any): string => {
     if (value === null || value === undefined) return '';
     if (typeof value === 'object') {
@@ -373,7 +425,11 @@ const MultiIndexJoinPage: React.FC = () => {
     return String(value);
   };
 
-  // Handle Excel export - exports exactly what's visible in the table
+  /**
+   * Handle Excel export - WYSIWYG export functionality
+   * Exports exactly what's visible in the table with proper formatting
+   * Supports both current page and full dataset export
+   */
   const handleExcelExport = async (forceExportAll = false) => {
     if (!join.result?.results) {
       console.warn('No join results available for export');
@@ -401,19 +457,20 @@ const MultiIndexJoinPage: React.FC = () => {
         return;
       }
       
-      // Convert to the format expected by exportToExcel utility
+      // Convert table data to format expected by exportToExcel utility
+      // Maintains column order and ensures proper mapping of display labels to data
       const columnLabels = columns.map(col => col.label);
       const exportRows = dataToExport.map(row => {
         const exportRow: any = {};
         columns.forEach(col => {
-          exportRow[col.label] = row[col.id] || '';
+          exportRow[col.label] = row[col.id] || ''; // Use display label as key
         });
         return exportRow;
       });
 
-      // Include metadata in filename
-      const viewType = mergeColumns ? 'merged' : 'separated';
-      const exportType = shouldExportAll ? '_all' : `_page${page + 1}`;
+      // Generate descriptive filename with metadata for easy identification
+      const viewType = mergeColumns ? 'merged' : 'separated';           // Column merge strategy
+      const exportType = shouldExportAll ? '_all' : `_page${page + 1}`; // Data scope
       const filename = `join_${leftIndex}_${rightIndex}_${viewType}${exportType}_${new Date().toISOString().split('T')[0]}`;
       
       // Use the raw exportToExcel utility
@@ -430,6 +487,10 @@ const MultiIndexJoinPage: React.FC = () => {
     }
   };
 
+  /**
+   * Render join summary statistics
+   * Provides high-level overview of join operation results
+   */
   const renderJoinSummary = (summary: any) => (
     <Grid container spacing={2} sx={{ mb: 2 }}>
       <Grid item xs={6} sm={3}>
@@ -461,6 +522,10 @@ const MultiIndexJoinPage: React.FC = () => {
     </Grid>
   );
 
+  /**
+   * Render preview table showing raw join records
+   * Displays JSON preview format for detailed inspection
+   */
   const renderPreviewTable = (records: any[]) => (
     <TableContainer component={Paper} sx={{ maxHeight: 400 }}>
       <Table size="small">
@@ -504,15 +569,19 @@ const MultiIndexJoinPage: React.FC = () => {
     </TableContainer>
   );
 
-  // Render structured table view
+  /**
+   * Render structured table view with advanced features
+   * Provides flattened, paginated, exportable table with column management
+   */
   const renderTableView = (results: any[]) => {
     const { columns, rows } = processTableData(results);
     const paginatedRows = rows.slice(page * rowsPerPage, page * rowsPerPage + rowsPerPage);
     
-    // Count columns by type for info display
-    const mergedColumnsCount = columns.filter(c => c.merged && c.field !== '_joinKey').length;
-    const leftColumnsCount = columns.filter(c => c.sourceIndex === leftIndex).length;
-    const rightColumnsCount = columns.filter(c => c.sourceIndex === rightIndex).length;
+    // Count columns by type for informational display to user
+    // Helps users understand the table structure and data distribution
+    const mergedColumnsCount = columns.filter(c => c.merged && c.field !== '_joinKey').length;  // Common fields
+    const leftColumnsCount = columns.filter(c => c.sourceIndex === leftIndex).length;           // Left-only fields
+    const rightColumnsCount = columns.filter(c => c.sourceIndex === rightIndex).length;         // Right-only fields
 
     return (
       <Box>

@@ -20,10 +20,10 @@
 │                DHR Frontend Application - Phase 1          │
 │                     ✅ COMPLETED & DEPLOYED                │
 ├─────────────────────────────────────────────────────────────┤
-│  Direct Query Interface │ Auto Query Interface │ Query Builder│
-│  - Manual ES Query      │ - URL Parameter Driven│ - Visual UI  │
-│  - JSON Editor          │ - Auto-Execution      │ - Field-Based│
-│  - Column Management    │ - Filter Management   │ - No-Code    │
+│ Direct Query │ Auto Query │ Query Builder │ Multi-Index Join │
+│ - Manual ES  │ - URL Param │ - Visual UI   │ - Cross-Index   │
+│ - JSON Edit  │ - Auto Exec │ - Field-Based │ - Join Types    │
+│ - Columns    │ - Filters   │ - No-Code     │ - Table Export  │
 ├─────────────────────────────────────────────────────────────┤
 │              Shared Component Architecture                  │
 │  QueryExecutionCard │ QueryResultsSection │ useElasticsearch│
@@ -34,6 +34,7 @@
 │
 ├── Shared Hooks Layer (Custom React Hooks)
 │   ├── useElasticsearchQuery     ├── useElasticsearchPagination
+│   ├── useMultiIndexJoin        ├── useSavedQueries  
 │   ├── Query State Management    ├── Results Formatting
 │   └── Error Handling           └── Performance Optimization
 │
@@ -125,7 +126,7 @@ src/
 
 ### ✅ **COMPLETED FEATURES (Phase 1)**
 
-#### **Three Query Interfaces Successfully Deployed:**
+#### **Four Query Interfaces Successfully Deployed:**
 
 1. **Direct Query Interface** (`/direct-query`)
    - ✅ Manual Elasticsearch JSON query editor
@@ -152,6 +153,15 @@ src/
    - ✅ Real-time Elasticsearch JSON generation
    - ✅ No-code interface for business users
    - ✅ Integration with shared execution engine
+
+4. **Multi-Index Join** (`/multi-index-join`) 🆕
+   - ✅ Cross-index data joining with four join types (Inner, Left, Right, Full)
+   - ✅ Automatic field discovery with dropdown selectors
+   - ✅ Real-time join preview with compatibility checking
+   - ✅ Advanced table view with flattened column structure
+   - ✅ Smart column merging and index differentiation
+   - ✅ WYSIWYG Excel export with pagination support
+   - ✅ Debounced requests to prevent API overload
 
 #### **Shared Architecture Achievements:**
 
@@ -286,6 +296,125 @@ export function extractFieldsFromMapping(mapping: any): FieldInfo[] {
 - **Real-time Preview**: Live Elasticsearch JSON generation
 - **Type Safety**: Full TypeScript support with field type detection
 - **No-Code Experience**: Business users can build queries without JSON knowledge
+
+### 1.4 Multi-Index Join 🆕
+
+#### **Architecture & Features**
+```typescript
+// ✅ IMPLEMENTED - Multi-Index Join System
+interface JoinConfiguration {
+  leftIndex: string;
+  rightIndex: string; 
+  joinField: { left: string; right: string; };
+  joinType: 'inner' | 'left' | 'right' | 'full';
+  fieldsToReturn?: { left: string[]; right: string[]; };
+}
+
+// Backend Service - In-Memory Join Processing
+class MultiIndexJoinService {
+  async performJoin(joins: JoinConfiguration[]): Promise<MultiIndexJoinResponse>;
+  async getJoinPreview(leftIndex: string, rightIndex: string, 
+                       leftField: string, rightField: string): Promise<JoinPreviewResponse>;
+}
+
+// Frontend Hook
+const useMultiIndexJoin = (): UseMultiIndexJoinResult => {
+  const [result, setResult] = useState<MultiIndexJoinResponse | null>(null);
+  const [preview, setPreview] = useState<JoinPreviewResponse | null>(null);
+  const [loading, setLoading] = useState(false);
+  
+  const executeJoin = useCallback(async (request: MultiIndexJoinRequest) => {
+    // Debounced execution with loading states
+    const joinResult = await multiIndexJoinService.executeJoin(request);
+    setResult(joinResult);
+  }, []);
+  
+  const getPreview = useCallback(async (...args) => {
+    // Auto-preview with 500ms debouncing to prevent excessive requests
+    const previewResult = await multiIndexJoinService.getJoinPreview(...args);
+    setPreview(previewResult);
+  }, []);
+};
+```
+
+#### **Key Features:**
+
+**🔗 Join Operations**
+- **Four Join Types**: Inner, Left, Right, Full Outer joins
+- **Cross-Index Queries**: Join data from any two Elasticsearch indices
+- **Field Path Support**: Full nested field support (`Data.projectId`, `Data.location.country`)
+- **Join Preview**: Test compatibility before executing full join
+
+**🎨 Advanced Table View**
+- **Flattened Columns**: All nested fields become individual columns
+- **Smart Column Merging**: 
+  - **Merged View**: Common fields combined into single columns
+  - **Separated View**: All fields with index-specific prefixes
+- **Index Differentiation**: Color-coded columns (Blue: left index, Red: right index)
+- **Column Tooltips**: Hover to see source index information
+
+**📊 Data Processing**
+- **In-Memory Joins**: Backend processes joins for up to 1000 records per index
+- **Field Auto-Discovery**: Dropdown selectors populated from index mappings
+- **Type-Safe Processing**: Proper handling of arrays, objects, dates, and primitives
+- **Real-time Preview**: Debounced preview updates (500ms) prevent request storms
+
+**📈 Export & Pagination**
+- **WYSIWYG Export**: Download exactly what's visible in table
+- **Export Options**: 
+  - Current page only
+  - All data 
+- **Smart Filename**: `join_leftindex_rightindex_merged_page1_2025-01-24.csv`
+- **Pagination**: 5/10/25/50 rows per page with sticky headers
+
+**🚀 Performance Features**
+- **Debounced Requests**: 500ms debouncing prevents excessive API calls
+- **Efficient Field Loading**: Parallel mapping API calls for both indices
+- **Lazy Column Processing**: Data flattening only when switching to table view
+- **Memory Management**: Proper cleanup of large result sets
+
+#### **User Experience Flow**
+1. **Index Selection**: Choose left and right indices from available options
+2. **Field Discovery**: Fields automatically populate as dropdowns from index mappings  
+3. **Join Configuration**: Select join fields and join type (Inner/Left/Right/Full)
+4. **Auto-Preview**: Real-time compatibility check with sample results
+5. **Join Execution**: Full join with configurable result limits
+6. **Table Analysis**: Switch between preview and structured table view
+7. **Export Options**: Download current page or all data as CSV
+
+#### **Technical Implementation**
+```typescript
+// Smart field flattening for table view
+const flattenObject = (obj: any, prefix = ''): Record<string, any> => {
+  const flattened: Record<string, any> = {};
+  Object.keys(obj || {}).forEach(key => {
+    const value = obj[key];
+    const newKey = prefix ? `${prefix}.${key}` : key;
+    
+    if (value !== null && typeof value === 'object' && !Array.isArray(value)) {
+      Object.assign(flattened, flattenObject(value, newKey));
+    } else {
+      flattened[newKey] = formatCellValue(value);
+    }
+  });
+  return flattened;
+};
+
+// Export with exact table representation
+const handleExcelExport = async (exportAll = false) => {
+  const { columns, rows } = processTableData(join.result.results);
+  const dataToExport = exportAll ? rows : rows.slice(page * rowsPerPage, page * rowsPerPage + rowsPerPage);
+  
+  exportToExcel({
+    columns: columns.map(col => col.label),
+    rows: dataToExport.map(row => {
+      const exportRow: any = {};
+      columns.forEach(col => exportRow[col.label] = row[col.id] || '');
+      return exportRow;
+    })
+  }, filename);
+};
+```
 
 ---
 
@@ -691,6 +820,109 @@ Response:
 }
 ```
 
+#### **4. Multi-Index Join Preview** 🆕
+```http
+GET /api/multi-index-join/preview?leftIndex={leftIndex}&rightIndex={rightIndex}&leftField={leftField}&rightField={rightField}
+
+Example:
+GET /api/multi-index-join/preview?leftIndex=project-index-v1&rightIndex=project-task-index-v1&leftField=Data.projectId&rightField=Data.projectId
+
+Response:
+{
+  "success": true,
+  "data": {
+    "joinSummary": {
+      "leftIndexTotal": 6,
+      "rightIndexTotal": 3,
+      "joinedRecords": 0,
+      "leftOnlyRecords": 6,
+      "rightOnlyRecords": 3
+    },
+    "preview": [
+      {
+        "joinKey": "P001",
+        "joinType": "left_only",
+        "leftRecord": {
+          "Data": {
+            "projectId": "P001",
+            "projectName": "Health Campaign 2024"
+          }
+        },
+        "rightRecord": null
+      }
+    ],
+    "sampleJoinKeys": {
+      "P001": 1,
+      "P002": 1
+    }
+  }
+}
+```
+
+#### **5. Execute Multi-Index Join** 🆕
+```http
+POST /api/multi-index-join
+Content-Type: application/json
+
+{
+  "joins": [
+    {
+      "leftIndex": "project-index-v1",
+      "rightIndex": "project-task-index-v1",
+      "joinField": {
+        "left": "Data.projectId",
+        "right": "Data.projectId"
+      },
+      "joinType": "full",
+      "limit": 1000
+    }
+  ],
+  "from": 0,
+  "size": 50
+}
+
+Response:
+{
+  "success": true,
+  "data": {
+    "totalResults": 9,
+    "results": [
+      {
+        "joinKey": "P001",
+        "joinType": "left_only",
+        "leftRecord": {
+          "Data": {
+            "projectId": "P001",
+            "projectName": "Health Campaign 2024",
+            "status": "active"
+          }
+        },
+        "rightRecord": null
+      },
+      {
+        "joinKey": "TASK001",
+        "joinType": "right_only",
+        "leftRecord": null,
+        "rightRecord": {
+          "Data": {
+            "projectId": "TASK001",
+            "taskName": "Survey Collection",
+            "status": "completed"
+          }
+        }
+      }
+    ],
+    "joinSummary": {
+      "leftIndexTotal": 6,
+      "rightIndexTotal": 3,
+      "joinedRecords": 0,
+      "leftOnlyRecords": 6,
+      "rightOnlyRecords": 3
+    }
+  }
+}
+```
+
 ### URL Patterns for Auto Query ✅ **IMPLEMENTED**
 
 #### **Basic Filtered Query**
@@ -718,7 +950,7 @@ Response:
 ## Summary
 
 ### ✅ **Successfully Delivered (Phase 1)**
-1. **Three Complete Query Interfaces**: DirectQuery, AutoQuery, and QueryBuilder
+1. **Four Complete Query Interfaces**: DirectQuery, AutoQuery, QueryBuilder, and Multi-Index Join
 2. **Shared Architecture**: Reusable hooks and components eliminating code duplication
 3. **Advanced Features**: Column management, Excel export, URL sharing, field discovery
 4. **Performance Optimizations**: Source filtering, pagination, session management
@@ -730,6 +962,7 @@ Response:
 - **Business Users**: No-code query building via QueryBuilder  
 - **Dashboard Integration**: URL-driven queries via AutoQuery
 - **Data Analysis**: Advanced column filtering and Excel export
+- **Cross-Index Analytics**: Multi-index data joining and consolidation
 - **Team Collaboration**: Shareable query URLs and consistent interfaces
 
 ### 🚀 **Technical Excellence Achieved**
@@ -739,4 +972,4 @@ Response:
 - **Maintainability**: Centralized logic in reusable hooks and components
 - **Scalability**: API-driven field discovery supporting any Elasticsearch index structure
 
-**Phase 1 represents a complete, production-ready Elasticsearch query interface system with three distinct user experience paths, built on a shared, maintainable architecture foundation.**
+**Phase 1 represents a complete, production-ready Elasticsearch query interface system with four distinct user experience paths, built on a shared, maintainable architecture foundation.**
