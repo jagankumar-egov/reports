@@ -1,0 +1,74 @@
+{
+  "title": "Query Examples & Guidelines",
+  "categories": [
+    {
+      "label": "Basic Queries",
+      "examples": [
+        {
+          "title": "Match All Documents:",
+          "code": "{\n  \"query\": {\n    \"match_all\": {}\n  },\n  \"size\": 10\n}"
+        },
+        {
+          "title": "Match Specific Field:",
+          "code": "{\n  \"query\": {\n    \"match\": {\n      \"field_name\": \"search_value\"\n    }\n  },\n  \"size\": 10\n}"
+        },
+        {
+          "title": "Term Query (Exact Match):",
+          "code": "{\n  \"query\": {\n    \"term\": {\n      \"status.keyword\": \"active\"\n    }\n  },\n  \"size\": 10\n}"
+        }
+      ]
+    },
+    {
+      "label": "Filters",
+      "examples": [
+        {
+          "title": "Range Filter:",
+          "code": "{\n  \"query\": {\n    \"range\": {\n      \"age\": {\n        \"gte\": 18,\n        \"lte\": 65\n      }\n    }\n  },\n  \"size\": 10\n}"
+        },
+        {
+          "title": "Multiple Filters (AND):",
+          "code": "{\n  \"query\": {\n    \"bool\": {\n      \"must\": [\n        { \"term\": { \"status.keyword\": \"active\" } },\n        { \"range\": { \"created_at\": { \"gte\": \"2023-01-01\" } } }\n      ]\n    }\n  },\n  \"size\": 10\n}"
+        },
+        {
+          "title": "Exclude Filter (NOT):",
+          "code": "{\n  \"query\": {\n    \"bool\": {\n      \"must_not\": [\n        { \"term\": { \"status.keyword\": \"deleted\" } }\n      ]\n    }\n  },\n  \"size\": 10\n}"
+        }
+      ]
+    },
+    {
+      "label": "Aggregations",
+      "examples": [
+        {
+          "title": "Terms Aggregation (Group By):",
+          "code": "{\n  \"size\": 0,\n  \"aggs\": {\n    \"status_counts\": {\n      \"terms\": {\n        \"field\": \"status.keyword\",\n        \"size\": 10\n      }\n    }\n  }\n}"
+        },
+        {
+          "title": "Date Histogram:",
+          "code": "{\n  \"size\": 0,\n  \"aggs\": {\n    \"monthly_counts\": {\n      \"date_histogram\": {\n        \"field\": \"created_at\",\n        \"calendar_interval\": \"month\"\n      }\n    }\n  }\n}"
+        },
+        {
+          "title": "Statistics Aggregation:",
+          "code": "{\n  \"size\": 0,\n  \"aggs\": {\n    \"age_stats\": {\n      \"stats\": {\n        \"field\": \"age\"\n      }\n    }\n  }\n}"
+        }
+      ]
+    },
+    {
+      "label": "Advanced",
+      "examples": [
+        {
+          "title": "Wildcard Search:",
+          "code": "{\n  \"query\": {\n    \"wildcard\": {\n      \"name.keyword\": \"*john*\"\n    }\n  },\n  \"size\": 10\n}"
+        },
+        {
+          "title": "Fuzzy Search:",
+          "code": "{\n  \"query\": {\n    \"fuzzy\": {\n      \"name\": {\n        \"value\": \"john\",\n        \"fuzziness\": \"AUTO\"\n      }\n    }\n  },\n  \"size\": 10\n}"
+        },
+        {
+          "title": "Multi-Match Query:",
+          "code": "{\n  \"query\": {\n    \"multi_match\": {\n      \"query\": \"search term\",\n      \"fields\": [\"name\", \"description\", \"content\"]\n    }\n  },\n  \"size\": 10\n}"
+        }
+      ]
+    }
+  ],
+  "tips": "💡 Tip: Click the copy icon to copy examples to clipboard. Modify field names and values to match your index schema."
+}

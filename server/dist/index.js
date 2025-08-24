@@ -12,9 +12,7 @@ const dotenv_1 = __importDefault(require("dotenv"));
 const logger_1 = require("./utils/logger");
 const errorHandler_1 = require("./middleware/errorHandler");
 const elasticsearch_1 = require("./services/elasticsearch");
-const query_1 = __importDefault(require("./routes/query"));
-const fields_1 = __importDefault(require("./routes/fields"));
-const projects_1 = __importDefault(require("./routes/projects"));
+const direct_query_1 = __importDefault(require("./routes/direct-query"));
 dotenv_1.default.config();
 console.log('DEBUG: ELASTICSEARCH_HOST =', process.env.ELASTICSEARCH_HOST);
 const app = (0, express_1.default)();
@@ -43,12 +41,10 @@ app.get('/health', (req, res) => {
         timestamp: new Date().toISOString(),
         service: 'dhr-backend',
         version: '1.0.0',
-        phase: 'Phase 1 - Query & Data Tables'
+        phase: 'Phase 1 - Direct Elasticsearch Query'
     });
 });
-app.use('/api/query', query_1.default);
-app.use('/api/fields', fields_1.default);
-app.use('/api/projects', projects_1.default);
+app.use('/api/direct-query', direct_query_1.default);
 app.use(errorHandler_1.errorHandler);
 app.use('*', (req, res) => {
     res.status(404).json({

@@ -13,23 +13,12 @@ class ElasticsearchService {
     }
     async initialize() {
         try {
-            const projectIndexMapping = {};
-            if (process.env.PROJECT_INDEX_MAPPING) {
-                const mappingPairs = process.env.PROJECT_INDEX_MAPPING.split(',');
-                for (const pair of mappingPairs) {
-                    const [project, index] = pair.trim().split(':');
-                    if (project && index) {
-                        projectIndexMapping[project.toLowerCase()] = index;
-                    }
-                }
-            }
             this.config = {
                 host: process.env.ELASTICSEARCH_HOST,
                 username: process.env.ELASTICSEARCH_USERNAME,
                 password: process.env.ELASTICSEARCH_PASSWORD,
                 caCert: process.env.ELASTICSEARCH_CA_CERT,
                 allowedIndexes: process.env.ALLOWED_HEALTH_INDEXES?.split(',') || [],
-                projectIndexMapping: projectIndexMapping,
                 requestTimeout: 30000,
                 maxRetries: 3,
             };
@@ -273,8 +262,67 @@ class ElasticsearchService {
     getAllowedIndexes() {
         return [...this.config.allowedIndexes];
     }
-    getProjectIndexMapping() {
-        return { ...this.config.projectIndexMapping };
+    async executeDirectQuery(params) {
+        const operationStartTime = Date.now();
+        const operationId = Math.random().toString(36).substr(2, 9);
+        logger_1.logger.info(`[ES-DIRECT-${operationId}] Starting direct Elasticsearch query`, {
+            operationId,
+            index: params.index,
+            from: params.from || 0,
+            size: params.size || 10,
+            _source: params._source ? (params._source === true ? 'all' : params._source.length) : 'all',
+        });
+        if (!this.client) {
+            logger_1.logger.error(`[ES-DIRECT-${operationId}] Elasticsearch client not initialized`);
+            throw new Error('Elasticsearch client not initialized');
+        }
+        this.validateIndexAccess([params.index]);
+        try {
+            const searchStartTime = Date.now();
+            logger_1.logger.info(`[ES-DIRECT-${operationId}] Executing direct query`, {
+                operationId,
+                host: this.config.host,
+                index: params.index,
+                query: JSON.stringify(params.query),
+                from: params.from || 0,
+                size: params.size || 10,
+                _source: params._source ? (params._source === true ? 'all' : params._source.length) : 'all',
+            });
+            const searchBody = {
+                ...params.query,
+                from: params.from || 0,
+                size: params.size || 10,
+            };
+            if (params._source !== undefined) {
+                searchBody._source = params._source;
+            }
+            const response = await this.client.search({
+                index: params.index,
+                body: searchBody,
+            });
+            const searchTime = Date.now() - searchStartTime;
+            const totalTime = Date.now() - operationStartTime;
+            logger_1.logger.info(`[ES-DIRECT-${operationId}] Direct query completed successfully`, {
+                operationId,
+                searchTime: `${searchTime}ms`,
+                totalTime: `${totalTime}ms`,
+                esTook: `${response.took}ms`,
+                hits: typeof response.hits.total === 'number' ? response.hits.total : response.hits.total?.value || 0,
+            });
+            return response;
+        }
+        catch (error) {
+            const errorTime = Date.now() - operationStartTime;
+            logger_1.logger.error(`[ES-DIRECT-${operationId}] Direct query failed after ${errorTime}ms`, {
+                operationId,
+                error: error instanceof Error ? error.message : String(error),
+                host: this.config.host,
+                index: params.index,
+                errorType: error instanceof Error ? error.name : 'UnknownError',
+                statusCode: error?.meta?.statusCode,
+            });
+            throw error;
+        }
     }
     async ping() {
         const operationStartTime = Date.now();

@@ -6,36 +6,11 @@ import {
   CardHeader,
   TextField,
   Button,
-  FormControl,
-  InputLabel,
-  Select,
-  MenuItem,
-  Alert,
   Typography,
   Divider,
   Grid,
-  Paper,
   CircularProgress,
-  Tooltip,
-  Table,
-  TableBody,
-  TableCell,
-  TableContainer,
-  TableHead,
-  TableRow,
-  TablePagination,
   Chip,
-  Checkbox,
-  Popover,
-  List,
-  ListItem,
-  ListItemButton,
-  ListItemIcon,
-  ListItemText,
-  Tabs,
-  Tab,
-  Collapse,
-  IconButton,
 } from '@mui/material';
 import {
   PlayArrow as ExecuteIcon,
@@ -43,17 +18,22 @@ import {
   Storage as IndexIcon,
   Code as CodeIcon,
   TableView as TableIcon,
-  Download as DownloadIcon,
-  ViewColumn as ColumnIcon,
-  Help as HelpIcon,
-  ExpandMore as ExpandMoreIcon,
-  ExpandLess as ExpandLessIcon,
-  ContentCopy as CopyIcon,
 } from '@mui/icons-material';
+
+import {
+  QueryInput,
+  DataTable,
+  QueryGuidelines,
+  IndexSelector,
+  ColumnFilter,
+  ExportActions,
+  ErrorDisplay,
+  AggregationsDisplay,
+  TableRow,
+} from '@/components/common';
 
 import { DirectQueryRequest, DirectQueryResponse, ElasticsearchHit } from '@/types';
 import { directQueryAPI } from '@/services/api';
-import { useTheme } from '@mui/material/styles';
 import {
   exportToExcel,
   getSelectedColumnsForIndex,
@@ -63,7 +43,6 @@ import {
 } from '@/utils/excelExport';
 
 const DirectQuery: React.FC = () => {
-  const theme = useTheme();
   
   // State management
   const [selectedIndex, setSelectedIndex] = useState<string>('');
@@ -88,9 +67,6 @@ const DirectQuery: React.FC = () => {
   const [columnFilterOpen, setColumnFilterOpen] = useState(false);
   const [columnAnchorEl, setColumnAnchorEl] = useState<HTMLButtonElement | null>(null);
   
-  // Guidelines panel state
-  const [guidelinesOpen, setGuidelinesOpen] = useState(false);
-  const [selectedTab, setSelectedTab] = useState(0);
 
   // Load available indexes on mount
   useEffect(() => {
@@ -355,7 +331,7 @@ const DirectQuery: React.FC = () => {
     
     // Create rows
     const rows = hits.map((hit, index) => {
-      const row: Record<string, any> = {
+      const row: TableRow = {
         id: `${hit._id}-${index}`,
         _id: hit._id,
         _score: hit._score,
@@ -381,7 +357,7 @@ const DirectQuery: React.FC = () => {
     });
 
     return { columns: displayColumns, rows };
-  }, [selectedIndex, selectedColumns, availableColumns]);
+  }, [selectedColumns]);
 
   // Get paginated data
   const getPaginatedHits = useCallback(() => {
@@ -486,28 +462,12 @@ const DirectQuery: React.FC = () => {
               <Grid container spacing={2}>
                 {/* Index Selection */}
                 <Grid item xs={12} md={4}>
-                  <FormControl fullWidth disabled={indexesLoading}>
-                    <InputLabel>Select Index</InputLabel>
-                    <Select
-                      value={selectedIndex}
-                      label="Select Index"
-                      onChange={(e) => setSelectedIndex(e.target.value)}
-                    >
-                      {availableIndexes.map((index) => (
-                        <MenuItem key={index} value={index}>
-                          {index}
-                        </MenuItem>
-                      ))}
-                    </Select>
-                  </FormControl>
-                  {indexesLoading && (
-                    <Box sx={{ display: 'flex', alignItems: 'center', mt: 1 }}>
-                      <CircularProgress size={16} />
-                      <Typography variant="body2" sx={{ ml: 1 }}>
-                        Loading indexes...
-                      </Typography>
-                    </Box>
-                  )}
+                  <IndexSelector
+                    selectedIndex={selectedIndex}
+                    availableIndexes={availableIndexes}
+                    onIndexChange={setSelectedIndex}
+                    loading={indexesLoading}
+                  />
                 </Grid>
 
                 {/* From Parameter */}
@@ -535,471 +495,15 @@ const DirectQuery: React.FC = () => {
                 </Grid>
 
                 {/* Query JSON Input */}
-                <Grid item xs={12}>
-                  <Typography variant="subtitle2" gutterBottom>
-                    Elasticsearch Query (JSON)
-                  </Typography>
-                  <TextField
-                    fullWidth
-                    multiline
-                    rows={12}
-                    value={queryText}
-                    onChange={handleQueryChange}
-                    placeholder="Enter your Elasticsearch query in JSON format..."
-                    sx={{
-                      fontFamily: 'monospace',
-                      '& .MuiInputBase-input': {
-                        fontFamily: 'Consolas, Monaco, "Courier New", monospace',
-                        fontSize: '14px',
-                      },
-                    }}
-                  />
-                </Grid>
+                <QueryInput
+                  queryText={queryText}
+                  onQueryChange={handleQueryChange}
+                  disabled={loading}
+                />
 
                 {/* Query Guidelines Panel */}
                 <Grid item xs={12}>
-                  <Box sx={{ display: 'flex', alignItems: 'center', gap: 1, mb: 1 }}>
-                    <IconButton
-                      onClick={() => setGuidelinesOpen(!guidelinesOpen)}
-                      size="small"
-                    >
-                      {guidelinesOpen ? <ExpandLessIcon /> : <ExpandMoreIcon />}
-                    </IconButton>
-                    <Typography variant="body2" color="text.secondary">
-                      Query Examples & Guidelines
-                    </Typography>
-                    <HelpIcon sx={{ fontSize: 16, color: 'text.disabled' }} />
-                  </Box>
-                  
-                  <Collapse in={guidelinesOpen}>
-                    <Box sx={{ 
-                      border: 1, 
-                      borderColor: 'divider', 
-                      borderRadius: 1, 
-                      p: 2, 
-                      bgcolor: 'background.paper',
-                      mb: 2
-                    }}>
-                      <Tabs 
-                        value={selectedTab} 
-                        onChange={(_, newTab) => setSelectedTab(newTab)}
-                        variant="scrollable"
-                        scrollButtons="auto"
-                        sx={{ borderBottom: 1, borderColor: 'divider', mb: 2 }}
-                      >
-                        <Tab label="Basic Queries" />
-                        <Tab label="Filters" />
-                        <Tab label="Aggregations" />
-                        <Tab label="Advanced" />
-                      </Tabs>
-                      
-                      {selectedTab === 0 && (
-                        <Box>
-                          <Typography variant="subtitle2" gutterBottom>Basic Query Examples</Typography>
-                          
-                          <Box sx={{ mb: 2 }}>
-                            <Typography variant="body2" sx={{ mb: 1, fontWeight: 'medium' }}>Match All Documents:</Typography>
-                            <Box sx={{ 
-                              bgcolor: 'grey.50', 
-                              p: 2, 
-                              borderRadius: 1, 
-                              fontFamily: 'monospace', 
-                              fontSize: '0.875rem',
-                              position: 'relative'
-                            }}>
-                              <IconButton
-                                size="small"
-                                sx={{ position: 'absolute', top: 4, right: 4 }}
-                                onClick={() => navigator.clipboard.writeText('{\n  "query": {\n    "match_all": {}\n  },\n  "size": 10\n}')}
-                              >
-                                <CopyIcon fontSize="small" />
-                              </IconButton>
-                              <pre style={{ margin: 0, whiteSpace: 'pre-wrap' }}>
-{`{
-  "query": {
-    "match_all": {}
-  },
-  "size": 10
-}`}
-                              </pre>
-                            </Box>
-                          </Box>
-                          
-                          <Box sx={{ mb: 2 }}>
-                            <Typography variant="body2" sx={{ mb: 1, fontWeight: 'medium' }}>Match Specific Field:</Typography>
-                            <Box sx={{ 
-                              bgcolor: 'grey.50', 
-                              p: 2, 
-                              borderRadius: 1, 
-                              fontFamily: 'monospace', 
-                              fontSize: '0.875rem',
-                              position: 'relative'
-                            }}>
-                              <IconButton
-                                size="small"
-                                sx={{ position: 'absolute', top: 4, right: 4 }}
-                                onClick={() => navigator.clipboard.writeText('{\n  "query": {\n    "match": {\n      "field_name": "search_value"\n    }\n  },\n  "size": 10\n}')}
-                              >
-                                <CopyIcon fontSize="small" />
-                              </IconButton>
-                              <pre style={{ margin: 0, whiteSpace: 'pre-wrap' }}>
-{`{
-  "query": {
-    "match": {
-      "field_name": "search_value"
-    }
-  },
-  "size": 10
-}`}
-                              </pre>
-                            </Box>
-                          </Box>
-                          
-                          <Box>
-                            <Typography variant="body2" sx={{ mb: 1, fontWeight: 'medium' }}>Term Query (Exact Match):</Typography>
-                            <Box sx={{ 
-                              bgcolor: 'grey.50', 
-                              p: 2, 
-                              borderRadius: 1, 
-                              fontFamily: 'monospace', 
-                              fontSize: '0.875rem',
-                              position: 'relative'
-                            }}>
-                              <IconButton
-                                size="small"
-                                sx={{ position: 'absolute', top: 4, right: 4 }}
-                                onClick={() => navigator.clipboard.writeText('{\n  "query": {\n    "term": {\n      "status.keyword": "active"\n    }\n  },\n  "size": 10\n}')}
-                              >
-                                <CopyIcon fontSize="small" />
-                              </IconButton>
-                              <pre style={{ margin: 0, whiteSpace: 'pre-wrap' }}>
-{`{
-  "query": {
-    "term": {
-      "status.keyword": "active"
-    }
-  },
-  "size": 10
-}`}
-                              </pre>
-                            </Box>
-                          </Box>
-                        </Box>
-                      )}
-                      
-                      {selectedTab === 1 && (
-                        <Box>
-                          <Typography variant="subtitle2" gutterBottom>Filter Query Examples</Typography>
-                          
-                          <Box sx={{ mb: 2 }}>
-                            <Typography variant="body2" sx={{ mb: 1, fontWeight: 'medium' }}>Range Filter:</Typography>
-                            <Box sx={{ 
-                              bgcolor: 'grey.50', 
-                              p: 2, 
-                              borderRadius: 1, 
-                              fontFamily: 'monospace', 
-                              fontSize: '0.875rem',
-                              position: 'relative'
-                            }}>
-                              <IconButton
-                                size="small"
-                                sx={{ position: 'absolute', top: 4, right: 4 }}
-                                onClick={() => navigator.clipboard.writeText('{\n  "query": {\n    "range": {\n      "age": {\n        "gte": 18,\n        "lte": 65\n      }\n    }\n  },\n  "size": 10\n}')}
-                              >
-                                <CopyIcon fontSize="small" />
-                              </IconButton>
-                              <pre style={{ margin: 0, whiteSpace: 'pre-wrap' }}>
-{`{
-  "query": {
-    "range": {
-      "age": {
-        "gte": 18,
-        "lte": 65
-      }
-    }
-  },
-  "size": 10
-}`}
-                              </pre>
-                            </Box>
-                          </Box>
-                          
-                          <Box sx={{ mb: 2 }}>
-                            <Typography variant="body2" sx={{ mb: 1, fontWeight: 'medium' }}>Multiple Filters (AND):</Typography>
-                            <Box sx={{ 
-                              bgcolor: 'grey.50', 
-                              p: 2, 
-                              borderRadius: 1, 
-                              fontFamily: 'monospace', 
-                              fontSize: '0.875rem',
-                              position: 'relative'
-                            }}>
-                              <IconButton
-                                size="small"
-                                sx={{ position: 'absolute', top: 4, right: 4 }}
-                                onClick={() => navigator.clipboard.writeText('{\n  "query": {\n    "bool": {\n      "must": [\n        { "term": { "status.keyword": "active" } },\n        { "range": { "created_at": { "gte": "2023-01-01" } } }\n      ]\n    }\n  },\n  "size": 10\n}')}
-                              >
-                                <CopyIcon fontSize="small" />
-                              </IconButton>
-                              <pre style={{ margin: 0, whiteSpace: 'pre-wrap' }}>
-{`{
-  "query": {
-    "bool": {
-      "must": [
-        { "term": { "status.keyword": "active" } },
-        { "range": { "created_at": { "gte": "2023-01-01" } } }
-      ]
-    }
-  },
-  "size": 10
-}`}
-                              </pre>
-                            </Box>
-                          </Box>
-                          
-                          <Box>
-                            <Typography variant="body2" sx={{ mb: 1, fontWeight: 'medium' }}>Exclude Filter (NOT):</Typography>
-                            <Box sx={{ 
-                              bgcolor: 'grey.50', 
-                              p: 2, 
-                              borderRadius: 1, 
-                              fontFamily: 'monospace', 
-                              fontSize: '0.875rem',
-                              position: 'relative'
-                            }}>
-                              <IconButton
-                                size="small"
-                                sx={{ position: 'absolute', top: 4, right: 4 }}
-                                onClick={() => navigator.clipboard.writeText('{\n  "query": {\n    "bool": {\n      "must_not": [\n        { "term": { "status.keyword": "deleted" } }\n      ]\n    }\n  },\n  "size": 10\n}')}
-                              >
-                                <CopyIcon fontSize="small" />
-                              </IconButton>
-                              <pre style={{ margin: 0, whiteSpace: 'pre-wrap' }}>
-{`{
-  "query": {
-    "bool": {
-      "must_not": [
-        { "term": { "status.keyword": "deleted" } }
-      ]
-    }
-  },
-  "size": 10
-}`}
-                              </pre>
-                            </Box>
-                          </Box>
-                        </Box>
-                      )}
-                      
-                      {selectedTab === 2 && (
-                        <Box>
-                          <Typography variant="subtitle2" gutterBottom>Aggregation Examples</Typography>
-                          
-                          <Box sx={{ mb: 2 }}>
-                            <Typography variant="body2" sx={{ mb: 1, fontWeight: 'medium' }}>Terms Aggregation (Group By):</Typography>
-                            <Box sx={{ 
-                              bgcolor: 'grey.50', 
-                              p: 2, 
-                              borderRadius: 1, 
-                              fontFamily: 'monospace', 
-                              fontSize: '0.875rem',
-                              position: 'relative'
-                            }}>
-                              <IconButton
-                                size="small"
-                                sx={{ position: 'absolute', top: 4, right: 4 }}
-                                onClick={() => navigator.clipboard.writeText('{\n  "size": 0,\n  "aggs": {\n    "status_counts": {\n      "terms": {\n        "field": "status.keyword",\n        "size": 10\n      }\n    }\n  }\n}')}
-                              >
-                                <CopyIcon fontSize="small" />
-                              </IconButton>
-                              <pre style={{ margin: 0, whiteSpace: 'pre-wrap' }}>
-{`{
-  "size": 0,
-  "aggs": {
-    "status_counts": {
-      "terms": {
-        "field": "status.keyword",
-        "size": 10
-      }
-    }
-  }
-}`}
-                              </pre>
-                            </Box>
-                          </Box>
-                          
-                          <Box sx={{ mb: 2 }}>
-                            <Typography variant="body2" sx={{ mb: 1, fontWeight: 'medium' }}>Date Histogram:</Typography>
-                            <Box sx={{ 
-                              bgcolor: 'grey.50', 
-                              p: 2, 
-                              borderRadius: 1, 
-                              fontFamily: 'monospace', 
-                              fontSize: '0.875rem',
-                              position: 'relative'
-                            }}>
-                              <IconButton
-                                size="small"
-                                sx={{ position: 'absolute', top: 4, right: 4 }}
-                                onClick={() => navigator.clipboard.writeText('{\n  "size": 0,\n  "aggs": {\n    "monthly_counts": {\n      "date_histogram": {\n        "field": "created_at",\n        "calendar_interval": "month"\n      }\n    }\n  }\n}')}
-                              >
-                                <CopyIcon fontSize="small" />
-                              </IconButton>
-                              <pre style={{ margin: 0, whiteSpace: 'pre-wrap' }}>
-{`{
-  "size": 0,
-  "aggs": {
-    "monthly_counts": {
-      "date_histogram": {
-        "field": "created_at",
-        "calendar_interval": "month"
-      }
-    }
-  }
-}`}
-                              </pre>
-                            </Box>
-                          </Box>
-                          
-                          <Box>
-                            <Typography variant="body2" sx={{ mb: 1, fontWeight: 'medium' }}>Statistics Aggregation:</Typography>
-                            <Box sx={{ 
-                              bgcolor: 'grey.50', 
-                              p: 2, 
-                              borderRadius: 1, 
-                              fontFamily: 'monospace', 
-                              fontSize: '0.875rem',
-                              position: 'relative'
-                            }}>
-                              <IconButton
-                                size="small"
-                                sx={{ position: 'absolute', top: 4, right: 4 }}
-                                onClick={() => navigator.clipboard.writeText('{\n  "size": 0,\n  "aggs": {\n    "age_stats": {\n      "stats": {\n        "field": "age"\n      }\n    }\n  }\n}')}
-                              >
-                                <CopyIcon fontSize="small" />
-                              </IconButton>
-                              <pre style={{ margin: 0, whiteSpace: 'pre-wrap' }}>
-{`{
-  "size": 0,
-  "aggs": {
-    "age_stats": {
-      "stats": {
-        "field": "age"
-      }
-    }
-  }
-}`}
-                              </pre>
-                            </Box>
-                          </Box>
-                        </Box>
-                      )}
-                      
-                      {selectedTab === 3 && (
-                        <Box>
-                          <Typography variant="subtitle2" gutterBottom>Advanced Query Examples</Typography>
-                          
-                          <Box sx={{ mb: 2 }}>
-                            <Typography variant="body2" sx={{ mb: 1, fontWeight: 'medium' }}>Wildcard Search:</Typography>
-                            <Box sx={{ 
-                              bgcolor: 'grey.50', 
-                              p: 2, 
-                              borderRadius: 1, 
-                              fontFamily: 'monospace', 
-                              fontSize: '0.875rem',
-                              position: 'relative'
-                            }}>
-                              <IconButton
-                                size="small"
-                                sx={{ position: 'absolute', top: 4, right: 4 }}
-                                onClick={() => navigator.clipboard.writeText('{\n  "query": {\n    "wildcard": {\n      "name.keyword": "*john*"\n    }\n  },\n  "size": 10\n}')}
-                              >
-                                <CopyIcon fontSize="small" />
-                              </IconButton>
-                              <pre style={{ margin: 0, whiteSpace: 'pre-wrap' }}>
-{`{
-  "query": {
-    "wildcard": {
-      "name.keyword": "*john*"
-    }
-  },
-  "size": 10
-}`}
-                              </pre>
-                            </Box>
-                          </Box>
-                          
-                          <Box sx={{ mb: 2 }}>
-                            <Typography variant="body2" sx={{ mb: 1, fontWeight: 'medium' }}>Fuzzy Search:</Typography>
-                            <Box sx={{ 
-                              bgcolor: 'grey.50', 
-                              p: 2, 
-                              borderRadius: 1, 
-                              fontFamily: 'monospace', 
-                              fontSize: '0.875rem',
-                              position: 'relative'
-                            }}>
-                              <IconButton
-                                size="small"
-                                sx={{ position: 'absolute', top: 4, right: 4 }}
-                                onClick={() => navigator.clipboard.writeText('{\n  "query": {\n    "fuzzy": {\n      "name": {\n        "value": "john",\n        "fuzziness": "AUTO"\n      }\n    }\n  },\n  "size": 10\n}')}
-                              >
-                                <CopyIcon fontSize="small" />
-                              </IconButton>
-                              <pre style={{ margin: 0, whiteSpace: 'pre-wrap' }}>
-{`{
-  "query": {
-    "fuzzy": {
-      "name": {
-        "value": "john",
-        "fuzziness": "AUTO"
-      }
-    }
-  },
-  "size": 10
-}`}
-                              </pre>
-                            </Box>
-                          </Box>
-                          
-                          <Box>
-                            <Typography variant="body2" sx={{ mb: 1, fontWeight: 'medium' }}>Multi-Match Query:</Typography>
-                            <Box sx={{ 
-                              bgcolor: 'grey.50', 
-                              p: 2, 
-                              borderRadius: 1, 
-                              fontFamily: 'monospace', 
-                              fontSize: '0.875rem',
-                              position: 'relative'
-                            }}>
-                              <IconButton
-                                size="small"
-                                sx={{ position: 'absolute', top: 4, right: 4 }}
-                                onClick={() => navigator.clipboard.writeText('{\n  "query": {\n    "multi_match": {\n      "query": "search term",\n      "fields": ["name", "description", "content"]\n    }\n  },\n  "size": 10\n}')}
-                              >
-                                <CopyIcon fontSize="small" />
-                              </IconButton>
-                              <pre style={{ margin: 0, whiteSpace: 'pre-wrap' }}>
-{`{
-  "query": {
-    "multi_match": {
-      "query": "search term",
-      "fields": ["name", "description", "content"]
-    }
-  },
-  "size": 10
-}`}
-                              </pre>
-                            </Box>
-                          </Box>
-                        </Box>
-                      )}
-                      
-                      <Typography variant="caption" color="text.secondary" sx={{ mt: 2, display: 'block' }}>
-                        💡 Tip: Click the copy icon to copy examples to clipboard. Modify field names and values to match your index schema.
-                      </Typography>
-                    </Box>
-                  </Collapse>
+                  <QueryGuidelines />
                 </Grid>
 
                 {/* Action Buttons */}
@@ -1025,25 +529,13 @@ const DirectQuery: React.FC = () => {
                     </Button>
                     
                     {result && rows.length > 0 && (
-                      <>
-                        <Button
-                          variant="outlined"
-                          startIcon={<DownloadIcon />}
-                          onClick={handleExcelExport}
-                          disabled={loading}
-                        >
-                          Export Excel
-                        </Button>
-                        
-                        <Button
-                          variant="outlined"
-                          startIcon={<ColumnIcon />}
-                          onClick={handleColumnFilterClick}
-                          disabled={loading}
-                        >
-                          Columns ({selectedColumns.length}/{schemaColumns.length > 0 ? schemaColumns.length : availableColumns.length})
-                        </Button>
-                      </>
+                      <ExportActions
+                        onExcelExport={handleExcelExport}
+                        onColumnFilterClick={handleColumnFilterClick}
+                        selectedColumnsCount={selectedColumns.length}
+                        totalColumnsCount={schemaColumns.length > 0 ? schemaColumns.length : availableColumns.length}
+                        disabled={loading}
+                      />
                     )}
                   </Box>
                 </Grid>
@@ -1055,248 +547,91 @@ const DirectQuery: React.FC = () => {
         {/* Error Display */}
         {error && (
           <Grid item xs={12}>
-            <Alert 
-              severity="error" 
+            <ErrorDisplay
+              error={error}
               onClose={() => setError(null)}
-              sx={{ 
-                '& .MuiAlert-message': { 
-                  fontSize: '0.95rem',
-                  lineHeight: 1.5,
-                  whiteSpace: 'pre-wrap'
-                }
-              }}
-            >
-              <Box>
-                <Typography variant="body1" component="div" sx={{ fontWeight: 'medium', mb: 0.5 }}>
-                  Query Execution Failed
-                </Typography>
-                <Typography variant="body2" component="div">
-                  {error}
-                </Typography>
-              </Box>
-            </Alert>
+            />
           </Grid>
         )}
 
         {/* Results Section */}
         {result && (
-          <Grid item xs={12}>
-            <Card elevation={2}>
-              <CardHeader
-                title={
-                  <Box sx={{ display: 'flex', alignItems: 'center', gap: 2 }}>
-                    <TableIcon />
-                    Query Results
-                    <Chip
-                      label={`${totalHits} hits in ${result.took}ms`}
-                      color="success"
-                      size="small"
-                    />
-                  </Box>
-                }
-              />
-              <CardContent>
-                {/* Query Info */}
-                <Box sx={{ mb: 2 }}>
-                  <Typography variant="body2" color="text.secondary">
-                    <strong>Index:</strong> {selectedIndex} | 
-                    <strong> Shards:</strong> {result._shards.successful}/{result._shards.total} successful |
-                    <strong> Timed out:</strong> {result.timed_out ? 'Yes' : 'No'}
-                  </Typography>
-                </Box>
+          <>
+            {/* Aggregations Display */}
+            {result.aggregations && (
+              <Grid item xs={12}>
+                <AggregationsDisplay 
+                  aggregations={result.aggregations}
+                  title="Query Aggregations"
+                  defaultExpanded={true}
+                />
+              </Grid>
+            )}
 
-                <Divider sx={{ mb: 2 }} />
-                
-                {/* Column Filter Popover */}
-                <Popover
-                  open={columnFilterOpen}
-                  anchorEl={columnAnchorEl}
-                  onClose={handleColumnFilterClose}
-                  anchorOrigin={{
-                    vertical: 'bottom',
-                    horizontal: 'left',
-                  }}
-                  transformOrigin={{
-                    vertical: 'top',
-                    horizontal: 'left',
-                  }}
-                >
-                  <Box sx={{ p: 2, minWidth: 300, maxWidth: 400 }}>
-                    <Typography variant="subtitle2" gutterBottom>
-                      Select Columns to Display
-                    </Typography>
-                    
-                    <Box sx={{ mb: 2, display: 'flex', gap: 1, flexWrap: 'wrap' }}>
-                      <Button
+            {/* Results Table */}
+            <Grid item xs={12}>
+              <Card elevation={2}>
+                <CardHeader
+                  title={
+                    <Box sx={{ display: 'flex', alignItems: 'center', gap: 2 }}>
+                      <TableIcon />
+                      Query Results
+                      <Chip
+                        label={`${totalHits} hits in ${result.took}ms`}
+                        color="success"
                         size="small"
-                        variant="outlined"
-                        onClick={handleSelectAllColumns}
-                      >
-                        Select All
-                      </Button>
-                      <Button
-                        size="small"
-                        variant="outlined"
-                        onClick={handleSelectNoColumns}
-                      >
-                        Clear All
-                      </Button>
-                      <Button
-                        size="small"
-                        variant="outlined"
-                        color="warning"
-                        onClick={() => {
-                          if (selectedIndex) {
-                            clearColumnPreferencesForIndex(selectedIndex);
-                            const columnsToReset = schemaColumns.length > 0 ? schemaColumns : availableColumns;
-                            setSelectedColumns(columnsToReset);
-                          }
-                        }}
-                      >
-                        Reset
-                      </Button>
+                      />
                     </Box>
-                    
-                    <List dense sx={{ maxHeight: 300, overflow: 'auto' }}>
-                      {(schemaColumns.length > 0 ? schemaColumns : availableColumns).map((column) => (
-                        <ListItem key={column} disablePadding>
-                          <ListItemButton
-                            onClick={() => handleColumnToggle(column)}
-                            dense
-                          >
-                            <ListItemIcon sx={{ minWidth: 36 }}>
-                              <Checkbox
-                                checked={selectedColumns.includes(column)}
-                                tabIndex={-1}
-                                disableRipple
-                                size="small"
-                              />
-                            </ListItemIcon>
-                            <ListItemText 
-                              primary={column}
-                              primaryTypographyProps={{ 
-                                fontSize: '0.875rem',
-                                fontFamily: column.startsWith('_') ? 'monospace' : 'inherit'
-                              }}
-                            />
-                          </ListItemButton>
-                        </ListItem>
-                      ))}
-                    </List>
-                    
-                    <Typography variant="caption" color="text.secondary" sx={{ mt: 1, display: 'block' }}>
-                      Selected columns will be saved for this index
+                  }
+                />
+                <CardContent>
+                  {/* Query Info */}
+                  <Box sx={{ mb: 2 }}>
+                    <Typography variant="body2" color="text.secondary">
+                      <strong>Index:</strong> {selectedIndex} | 
+                      <strong> Shards:</strong> {result._shards.successful}/{result._shards.total} successful |
+                      <strong> Timed out:</strong> {result.timed_out ? 'Yes' : 'No'}
                     </Typography>
                   </Box>
-                </Popover>
 
-                {/* Results Table */}
-                {rows.length > 0 ? (
-                  <>
-                    <TableContainer component={Paper} variant="outlined">
-                      <Table sx={{ minWidth: 650 }} size="small">
-                        <TableHead>
-                          <TableRow>
-                            {columns.map((column) => (
-                              <TableCell
-                                key={column}
-                                sx={{
-                                  fontWeight: 'bold',
-                                  backgroundColor: theme.palette.grey[50],
-                                }}
-                              >
-                                {column}
-                              </TableCell>
-                            ))}
-                          </TableRow>
-                        </TableHead>
-                        <TableBody>
-                          {rows.map((row) => (
-                            <TableRow
-                              key={row.id}
-                              sx={{ '&:last-child td, &:last-child th': { border: 0 } }}
-                            >
-                              {columns.map((column) => {
-                                const rawValue = row[column];
-                                const cellValue = rawValue !== undefined && rawValue !== null
-                                  ? typeof rawValue === 'object'
-                                    ? JSON.stringify(rawValue)
-                                    : String(rawValue)
-                                  : '-';
-                                
-                                // Format tooltip content for better readability
-                                const tooltipContent = rawValue !== undefined && rawValue !== null
-                                  ? typeof rawValue === 'object'
-                                    ? JSON.stringify(rawValue, null, 2) // Pretty format JSON
-                                    : String(rawValue)
-                                  : 'No data';
-                                
-                                const shouldShowTooltip = cellValue.length > 30 || typeof rawValue === 'object';
-                                
-                                return (
-                                  <TableCell 
-                                    key={`${row.id}-${column}`}
-                                    sx={{
-                                      maxWidth: '200px',
-                                      maxHeight: '60px',
-                                      overflow: 'hidden',
-                                      textOverflow: 'ellipsis',
-                                      whiteSpace: 'nowrap',
-                                      position: 'relative',
-                                    }}
-                                  >
-                                    {shouldShowTooltip ? (
-                                      <Tooltip 
-                                        title={
-                                          <Box component="pre" sx={{ 
-                                            whiteSpace: 'pre-wrap', 
-                                            fontSize: '0.75rem',
-                                            fontFamily: 'monospace',
-                                            maxWidth: '400px',
-                                            maxHeight: '300px',
-                                            overflow: 'auto'
-                                          }}>
-                                            {tooltipContent}
-                                          </Box>
-                                        } 
-                                        placement="top"
-                                        arrow
-                                        enterDelay={300}
-                                      >
-                                        <span style={{ cursor: 'help' }}>{cellValue}</span>
-                                      </Tooltip>
-                                    ) : (
-                                      <span>{cellValue}</span>
-                                    )}
-                                  </TableCell>
-                                );
-                              })}
-                            </TableRow>
-                          ))}
-                        </TableBody>
-                      </Table>
-                    </TableContainer>
+                  <Divider sx={{ mb: 2 }} />
+                  
+                  {/* Column Filter Popover */}
+                  <ColumnFilter
+                    open={columnFilterOpen}
+                    anchorEl={columnAnchorEl}
+                    onClose={handleColumnFilterClose}
+                    availableColumns={schemaColumns.length > 0 ? schemaColumns : availableColumns}
+                    selectedColumns={selectedColumns}
+                    onColumnToggle={handleColumnToggle}
+                    onSelectAll={handleSelectAllColumns}
+                    onSelectNone={handleSelectNoColumns}
+                    onReset={() => {
+                      if (selectedIndex) {
+                        clearColumnPreferencesForIndex(selectedIndex);
+                        const columnsToReset = schemaColumns.length > 0 ? schemaColumns : availableColumns;
+                        setSelectedColumns(columnsToReset);
+                      }
+                    }}
+                    footerMessage="Selected columns will be saved for this index"
+                  />
 
-                    <TablePagination
-                      rowsPerPageOptions={[5, 10, 25, 50]}
-                      component="div"
-                      count={totalHits}
-                      rowsPerPage={rowsPerPage}
-                      page={page}
-                      onPageChange={handleChangePage}
-                      onRowsPerPageChange={handleChangeRowsPerPage}
-                    />
-                  </>
-                ) : (
-                  <Box sx={{ textAlign: 'center', py: 4 }}>
-                    <Typography color="text.secondary">
-                      No results found
-                    </Typography>
-                  </Box>
-                )}
-              </CardContent>
-            </Card>
-          </Grid>
+                  {/* Results Table */}
+                  <DataTable
+                    columns={columns}
+                    rows={rows}
+                    page={page}
+                    rowsPerPage={rowsPerPage}
+                    totalCount={totalHits}
+                    onPageChange={handleChangePage}
+                    onRowsPerPageChange={handleChangeRowsPerPage}
+                    loading={loading}
+                    emptyMessage="No results found"
+                  />
+                </CardContent>
+              </Card>
+            </Grid>
+          </>
         )}
       </Grid>
     </Box>
