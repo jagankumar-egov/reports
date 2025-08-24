@@ -14,6 +14,7 @@ import ErrorBoundary from '@/components/common/ErrorBoundary';
 // Page components
 import DirectQueryPage from '@/pages/DirectQueryPage';
 import AutoQueryPage from '@/pages/AutoQueryPage';
+import QueryBuilderPage from '@/pages/QueryBuilderPage';
 import LoadingSpinner from '@/components/common/LoadingSpinner';
 
 const App: React.FC = () => {
@@ -97,6 +98,9 @@ const App: React.FC = () => {
             
             {/* Auto Query with URL Parameters */}
             <Route path="/auto-query" element={<AutoQueryPage />} />
+            
+            {/* Visual Query Builder */}
+            <Route path="/query-builder" element={<QueryBuilderPage />} />
             
             {/* Catch-all route */}
             <Route path="*" element={<Navigate to="/direct-query" replace />} />

@@ -85,6 +85,14 @@ class ApiService {
     return response.data.data;
   }
 
+  async getIndexMapping(indexName: string): Promise<any> {
+    const response = await this.client.get<ApiResponse<any>>(`/direct-query/indexes/${indexName}/mapping`);
+    if (!response.data.success || !response.data.data) {
+      throw new Error(response.data.error?.message || 'Failed to get index mapping');
+    }
+    return response.data.data;
+  }
+
   // Health check
   async healthCheck(): Promise<any> {
     const response = await this.client.get('/health');
@@ -99,6 +107,7 @@ export const apiService = new ApiService();
 export const directQueryAPI = {
   execute: (request: DirectQueryRequest) => apiService.executeDirectQuery(request),
   getIndexes: () => apiService.getAvailableIndexes(),
+  getIndexMapping: (indexName: string) => apiService.getIndexMapping(indexName),
 };
 
 export default apiService;

@@ -144,6 +144,55 @@ class DirectQueryController {
             },
         });
     }
+    async getIndexMapping(req, res) {
+        const operationStartTime = Date.now();
+        const operationId = Math.random().toString(36).substr(2, 9);
+        const { indexName } = req.params;
+        logger_1.logger.info(`[DIRECT-QUERY-MAPPING-${operationId}] Getting mapping for index: ${indexName}`);
+        if (!indexName) {
+            res.status(400).json({
+                success: false,
+                error: {
+                    code: 'MISSING_INDEX_NAME',
+                    message: 'Index name is required'
+                }
+            });
+            return;
+        }
+        try {
+            const mappingStartTime = Date.now();
+            const response = await elasticsearch_1.elasticsearchService.getMapping(indexName);
+            const mappingTime = Date.now() - mappingStartTime;
+            const totalTime = Date.now() - operationStartTime;
+            logger_1.logger.info(`[DIRECT-QUERY-MAPPING-${operationId}] Retrieved mapping for index ${indexName} in ${totalTime}ms`);
+            res.json({
+                success: true,
+                data: response,
+                meta: {
+                    operationId,
+                    totalTime: `${totalTime}ms`,
+                    mappingTime: `${mappingTime}ms`,
+                    indexName,
+                    timestamp: new Date().toISOString(),
+                },
+            });
+        }
+        catch (error) {
+            const errorTime = Date.now() - operationStartTime;
+            logger_1.logger.error(`[DIRECT-QUERY-MAPPING-${operationId}] Failed to get mapping for index ${indexName} after ${errorTime}ms`, {
+                error: error instanceof Error ? error.message : String(error),
+                errorType: error instanceof Error ? error.name : 'UnknownError',
+            });
+            res.status(500).json({
+                success: false,
+                error: {
+                    code: 'MAPPING_FETCH_ERROR',
+                    message: `Failed to get mapping for index: ${indexName}`,
+                    details: error instanceof Error ? error.message : String(error),
+                }
+            });
+        }
+    }
 }
 exports.DirectQueryController = DirectQueryController;
 //# sourceMappingURL=directQueryController.js.map

@@ -3,3 +3,8 @@
 /client/node_modules
 *.log
 /server/logs
+/server/dist
+/server/logs
+/dist
+/build
+

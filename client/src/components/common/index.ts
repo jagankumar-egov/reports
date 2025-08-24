@@ -11,5 +11,6 @@ export { default as LoadingSpinner } from './LoadingSpinner';
 export { default as ShareableLink } from './ShareableLink';
 export { default as QueryExecutionCard } from './QueryExecutionCard';
 export { default as QueryResultsSection } from './QueryResultsSection';
+export { default as QueryBuilder } from './QueryBuilder';
 
 export type { TableRow, TableColumn } from './DataTable';

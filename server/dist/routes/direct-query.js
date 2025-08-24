@@ -11,5 +11,8 @@ router.post('/', (0, errorHandler_1.asyncHandler)(async (req, res) => {
 router.get('/indexes', (0, errorHandler_1.asyncHandler)(async (req, res) => {
     await directQueryController.getAvailableIndexes(req, res);
 }));
+router.get('/indexes/:indexName/mapping', (0, errorHandler_1.asyncHandler)(async (req, res) => {
+    await directQueryController.getIndexMapping(req, res);
+}));
 exports.default = router;
 //# sourceMappingURL=direct-query.js.map

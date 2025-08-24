@@ -3,1807 +3,740 @@
 ## Table of Contents
 1. [Architecture Overview](#architecture-overview)
 2. [Technology Stack](#technology-stack)
-3. [Design System](#design-system)
-4. [Phase 1: Query & Data Tables](#phase-1-query--data-tables)
-5. [Phase 2: Filter Management](#phase-2-filter-management)
-6. [Phase 3: Dashboard System](#phase-3-dashboard-system)
-7. [Phase 4: Export Functionality](#phase-4-export-functionality)
-8. [Phase 5: Documentation & UX](#phase-5-documentation--ux)
-9. [Implementation Strategy](#implementation-strategy)
+3. [Current Implementation Status](#current-implementation-status)
+4. [Phase 1: Query Interfaces - COMPLETED](#phase-1-query-interfaces---completed)
+5. [Shared Architecture & Components](#shared-architecture--components)
+6. [Phase 2: Advanced Features (Planned)](#phase-2-advanced-features-planned)
+7. [Implementation Insights](#implementation-insights)
+8. [API Documentation](#api-documentation)
 
 ---
 
 ## Architecture Overview
 
-### High-Level Frontend Architecture
+### Actual Implementation Architecture
 ```
 ┌─────────────────────────────────────────────────────────────┐
-│                    DHR Frontend Application                 │
+│                DHR Frontend Application - Phase 1          │
+│                     ✅ COMPLETED & DEPLOYED                │
 ├─────────────────────────────────────────────────────────────┤
-│  Phase 1: Query Engine    │  Phase 2: Filter Management    │
-│  - Query Builder          │  - Filter CRUD                 │
-│  - Data Tables           │  - Filter Library              │
-│  - Result Viewer         │  - Quick Filters               │
+│  Direct Query Interface │ Auto Query Interface │ Query Builder│
+│  - Manual ES Query      │ - URL Parameter Driven│ - Visual UI  │
+│  - JSON Editor          │ - Auto-Execution      │ - Field-Based│
+│  - Column Management    │ - Filter Management   │ - No-Code    │
 ├─────────────────────────────────────────────────────────────┤
-│  Phase 3: Dashboard System │ Phase 4: Export System        │
-│  - Dashboard Builder      │  - Export Manager             │
-│  - Gadget Library        │  - Process Tracker            │
-│  - Layout Manager        │  - Download Center             │
-├─────────────────────────────────────────────────────────────┤
-│  Phase 5: Documentation & UX                               │
-│  - Help System           │  - Onboarding                  │
-│  - User Guides          │  - Interactive Tutorials       │
+│              Shared Component Architecture                  │
+│  QueryExecutionCard │ QueryResultsSection │ useElasticsearch│
+│  - Index Selection   │ - Table Display     │ - Query Hook    │
+│  - Query Execution   │ - Pagination        │ - Pagination    │
+│  - ShareableLink     │ - Export Actions    │ - Error Handle  │
 └─────────────────────────────────────────────────────────────┘
 │
-├── Shared Components Layer
-│   ├── Navigation        ├── Data Grid        ├── Charts
-│   ├── Forms            ├── Modals           ├── Notifications
-│   └── Authentication   └── Error Handling   └── Loading States
+├── Shared Hooks Layer (Custom React Hooks)
+│   ├── useElasticsearchQuery     ├── useElasticsearchPagination
+│   ├── Query State Management    ├── Results Formatting
+│   └── Error Handling           └── Performance Optimization
 │
-├── State Management Layer (Redux Toolkit + RTK Query)
-│   ├── Query State      ├── Filter State     ├── Dashboard State
-│   ├── User State       ├── Export State     ├── UI State
+├── Common Components Layer
+│   ├── QueryExecutionCard       ├── QueryResultsSection
+│   ├── QueryBuilder            ├── ShareableLink
+│   ├── DataTable              ├── IndexSelector
+│   └── ErrorDisplay           └── LoadingSpinner
 │
-├── API Layer (Axios + React Query)
-│   ├── Query API        ├── Filter API       ├── Dashboard API
-│   ├── Export API       ├── Auth API         ├── Filestore API
+├── API Layer (Axios-based)
+│   ├── directQueryAPI.execute()        ├── directQueryAPI.getIndexes()
+│   ├── directQueryAPI.getIndexMapping()├── Error Response Transformation
+│   └── Request/Response Interceptors   └── Structured Error Handling
 │
-└── Core Services Layer
-    ├── Authentication   ├── Error Handling   ├── Caching
-    ├── Permissions     ├── Analytics        ├── Theme
+└── Utility Layer
+    ├── mappingUtils (ES Field Extraction)  ├── excelExport (Data Export)
+    ├── Column Preferences Management       ├── Error Message Enhancement
+    └── Performance Optimization Helpers   └── Query Validation
 ```
 
 ---
 
 ## Technology Stack
 
-### Core Technologies
+### Core Technologies ✅ **IMPLEMENTED**
 ```json
 {
-  "framework": "React 18.x",
-  "language": "TypeScript",
+  "framework": "React 18.x with TypeScript",
   "ui_library": "Material-UI (MUI) v5",
-  "charting": "Apache ECharts + echarts-for-react",
-  "state_management": "Redux Toolkit + RTK Query",
   "routing": "React Router v6",
+  "state_management": "React Hooks + Context (Redux removed for simplicity)",
   "styling": "MUI System + Emotion",
   "build_tool": "Vite",
-  "testing": "Jest + React Testing Library",
-  "e2e_testing": "Cypress"
+  "api_client": "Axios with custom interceptors"
 }
 ```
 
-### Additional Libraries
+### Additional Libraries ✅ **IMPLEMENTED**
 ```json
 {
-  "data_grid": "@mui/x-data-grid-pro",
-  "date_handling": "date-fns",
-  "forms": "react-hook-form + yup",
-  "icons": "@mui/icons-material + lucide-react",
-  "notifications": "notistack",
-  "drag_drop": "@dnd-kit/core",
-  "code_editor": "@monaco-editor/react",
-  "file_handling": "react-dropzone",
-  "tour_guide": "reactour"
+  "data_export": "xlsx (Excel export)",
+  "icons": "@mui/icons-material",
+  "notifications": "Custom notification system",
+  "file_handling": "Built-in file download",
+  "forms": "Native React form handling",
+  "query_validation": "JSON parsing with error handling"
 }
 ```
 
-### Project Structure
+### Project Structure ✅ **ACTUAL IMPLEMENTATION**
 ```
 src/
-├── components/           # Reusable UI components
-│   ├── common/          # Generic components
-│   ├── forms/           # Form components
-│   ├── charts/          # Chart components
-│   └── layout/          # Layout components
-├── pages/               # Page components (one per route)
-│   ├── query/           # Phase 1: Query pages
-│   ├── filters/         # Phase 2: Filter pages
-│   ├── dashboards/      # Phase 3: Dashboard pages
-│   ├── exports/         # Phase 4: Export pages
-│   └── help/            # Phase 5: Documentation pages
-├── hooks/               # Custom React hooks
-├── services/            # API services and utilities
-├── store/               # Redux store configuration
-├── types/               # TypeScript type definitions
-├── utils/               # Utility functions
-└── constants/           # Application constants
+├── components/
+│   ├── common/                 # 14+ Shared Components
+│   │   ├── QueryExecutionCard.tsx    # Reusable query interface
+│   │   ├── QueryResultsSection.tsx   # Reusable results display
+│   │   ├── QueryBuilder.tsx          # Visual query builder
+│   │   ├── DataTable.tsx             # Enhanced data grid
+│   │   ├── ShareableLink.tsx         # URL generation for Auto Query
+│   │   ├── IndexSelector.tsx         # ES index selection
+│   │   ├── ExportActions.tsx         # Excel export functionality
+│   │   └── ErrorDisplay.tsx          # Structured error handling
+│   ├── layout/                # Navigation & App Structure
+│   │   ├── AppBar.tsx               # Application header
+│   │   └── Sidebar.tsx              # Phase-based navigation
+│   └── query/                 # Query-specific Components
+│       ├── DirectQuery.tsx          # Manual ES query interface
+│       ├── AutoQuery.tsx            # URL-driven queries
+│       └── QueryBuilderPage.tsx     # Visual query building
+├── hooks/                     # Custom React Hooks
+│   ├── useElasticsearchQuery.ts     # Query state & execution
+│   └── useElasticsearchPagination.ts # Pagination logic
+├── pages/                     # Page Wrappers
+│   ├── DirectQueryPage.tsx          # /direct-query route
+│   ├── AutoQueryPage.tsx            # /auto-query route
+│   └── QueryBuilderPage.tsx         # /query-builder route
+├── services/                  # API Services
+│   └── api.ts                       # Elasticsearch API client
+├── utils/                     # Utility Functions
+│   ├── mappingUtils.ts              # ES field mapping extraction
+│   └── excelExport.ts               # Excel export functionality
+└── types/                     # TypeScript Definitions
+    └── index.ts                     # API & component types
 ```
 
 ---
 
-## Design System
+## Current Implementation Status
 
-### Material-UI Theme Configuration
-```typescript
-const dhrTheme = createTheme({
-  palette: {
-    mode: 'light',
-    primary: {
-      main: '#1976d2',      // DHR Blue
-      light: '#42a5f5',
-      dark: '#1565c0',
-    },
-    secondary: {
-      main: '#9c27b0',      // DHR Purple
-      light: '#ba68c8',
-      dark: '#7b1fa2',
-    },
-    background: {
-      default: '#f5f5f5',
-      paper: '#ffffff',
-    },
-    success: {
-      main: '#2e7d32',
-    },
-    warning: {
-      main: '#ed6c02',
-    },
-    error: {
-      main: '#d32f2f',
-    },
-  },
-  typography: {
-    fontFamily: '"Roboto", "Helvetica", "Arial", sans-serif',
-    h1: { fontSize: '2.5rem', fontWeight: 300 },
-    h2: { fontSize: '2rem', fontWeight: 400 },
-    h3: { fontSize: '1.75rem', fontWeight: 400 },
-    h4: { fontSize: '1.5rem', fontWeight: 500 },
-    h5: { fontSize: '1.25rem', fontWeight: 500 },
-    h6: { fontSize: '1rem', fontWeight: 500 },
-  },
-  shape: {
-    borderRadius: 8,
-  },
-  components: {
-    MuiCard: {
-      styleOverrides: {
-        root: {
-          boxShadow: '0 2px 8px rgba(0,0,0,0.1)',
-        },
-      },
-    },
-    MuiButton: {
-      styleOverrides: {
-        root: {
-          textTransform: 'none',
-          borderRadius: 8,
-        },
-      },
-    },
-  },
-});
-```
+### ✅ **COMPLETED FEATURES (Phase 1)**
 
-### Component Design Principles
-- **Consistent Spacing**: 8px grid system
-- **Responsive Design**: Mobile-first approach
-- **Accessibility**: WCAG 2.1 AA compliance
-- **Performance**: Lazy loading and virtualization
-- **Theming**: Light/dark mode support
+#### **Three Query Interfaces Successfully Deployed:**
+
+1. **Direct Query Interface** (`/direct-query`)
+   - ✅ Manual Elasticsearch JSON query editor
+   - ✅ Syntax highlighting and validation
+   - ✅ Interactive query guidelines with examples
+   - ✅ Advanced column filtering and management
+   - ✅ Session-based column preferences
+   - ✅ Full Excel export with customizable fields
+   - ✅ ShareableLink integration for generating Auto Query URLs
+
+2. **Auto Query Interface** (`/auto-query`)  
+   - ✅ URL parameter-driven query generation
+   - ✅ Automatic query execution on load
+   - ✅ Visual filter management with chips
+   - ✅ Support for nested field paths (e.g., `Data.boundaryHierarchy.country`)
+   - ✅ Smart .keyword suffix handling for text fields
+   - ✅ URL copying and sharing functionality
+   - ✅ Real-time URL parameter visualization
+
+3. **Visual Query Builder** (`/query-builder`) 🆕
+   - ✅ Field discovery from Elasticsearch mappings
+   - ✅ Smart operator suggestions based on field types
+   - ✅ Visual query construction with AND/OR logic
+   - ✅ Real-time Elasticsearch JSON generation
+   - ✅ No-code interface for business users
+   - ✅ Integration with shared execution engine
+
+#### **Shared Architecture Achievements:**
+
+- ✅ **Code Deduplication**: ~400+ lines of duplicate code eliminated
+- ✅ **useElasticsearchQuery Hook**: Centralized query state management
+- ✅ **useElasticsearchPagination Hook**: Reusable pagination logic
+- ✅ **QueryExecutionCard Component**: Shared query interface
+- ✅ **QueryResultsSection Component**: Shared results display
+- ✅ **Consistent Error Handling**: Structured API error messages
+- ✅ **Performance Optimization**: `_source` filtering for large datasets
 
 ---
 
-## Phase 1: Direct Elasticsearch Query ✅ **COMPLETED**
+## Phase 1: Query Interfaces - ✅ COMPLETED
 
-**Timeline: 4-6 weeks**
-**Goal: Enable users to execute direct Elasticsearch queries and view results in tabular format**
+### 1.1 Direct Query Interface
 
-### ✅ **Phase 1 Implementation Status**
-
-**Phase 1 has been successfully completed and deployed** with the following core functionality:
-
-#### **Implemented Features:**
-- ✅ **Direct ES Query Interface**: Full JSON query syntax support
-- ✅ **Interactive Query Guidelines**: Tabbed examples (Basic, Filters, Aggregations, Advanced)
-- ✅ **Dynamic Results Table**: Column selection, sorting, pagination
-- ✅ **Excel Export**: Full dataset export with customizable columns
-- ✅ **Performance Optimization**: `_source` field filtering and query optimization
-- ✅ **Error Handling**: Structured error messages with helpful suggestions
-- ✅ **Session Management**: Column preferences saved per index
-- ✅ **Responsive Design**: Mobile-friendly interface
-
-#### **Actual Implementation Architecture:**
+#### **Architecture & Features**
 ```typescript
-// Current Phase 1 Structure (Implemented)
-DHR Phase 1 (Direct Query):
-├── DirectQueryPage.tsx           // Main query interface page
-├── DirectQuery.tsx               // Core query component
-│   ├── Query Configuration       // Index selection, parameters
-│   ├── Interactive Guidelines    // Tabbed query examples
-│   ├── Results Display          // Dynamic table with tooltips
-│   └── Export & Column Tools    // Excel export, column selection
-├── Sidebar Navigation           // Clean phase-focused navigation
-├── Error Handling              // Structured API error display
-└── Session Storage             // Column preferences persistence
-```
-
-#### **Key Differences from Original Design:**
-- **Simplified Approach**: Focused on direct ES queries instead of JQL
-- **Interactive Guidelines**: Built-in query examples with copy-paste functionality  
-- **Real-time Optimization**: `_source` filtering for performance
-- **Enhanced UX**: Structured error handling and session management
-
-### 1.1 Query Builder Component
-```typescript
-// components/query/QueryBuilder.tsx
-interface QueryBuilderProps {
-  onQueryChange: (query: string) => void;
-  allowedIndexes: string[];
-  availableFields: FieldDefinition[];
-}
-
-const QueryBuilder: React.FC<QueryBuilderProps> = ({
-  onQueryChange,
-  allowedIndexes,
-  availableFields
-}) => {
-  // Visual query builder with JQL support
-  // Auto-completion for fields and values
-  // Syntax highlighting
-  // Query validation
-};
-```
-
-### 1.2 Data Table Component
-```typescript
-// components/data/DataTable.tsx
-import { DataGridPro } from '@mui/x-data-grid-pro';
-
-interface DataTableProps {
-  data: QueryResult[];
-  columns: GridColDef[];
-  loading: boolean;
-  totalRows: number;
-  onPageChange: (page: number) => void;
-  onSortChange: (sort: GridSortModel) => void;
-}
-
-const DataTable: React.FC<DataTableProps> = ({
-  data,
-  columns,
-  loading,
-  totalRows,
-  onPageChange,
-  onSortChange
-}) => {
-  return (
-    <DataGridPro
-      rows={data}
-      columns={columns}
-      loading={loading}
-      pagination
-      paginationMode="server"
-      rowCount={totalRows}
-      pageSize={50}
-      rowsPerPageOptions={[25, 50, 100]}
-      onPageChange={onPageChange}
-      onSortModelChange={onSortChange}
-      checkboxSelection
-      disableSelectionOnClick
-      components={{
-        Toolbar: CustomDataGridToolbar,
-        NoRowsOverlay: CustomNoDataOverlay,
-        LoadingOverlay: CustomLoadingOverlay,
-      }}
-    />
-  );
-};
-```
-
-### 1.3 Query Execution Page
-```typescript
-// pages/query/QueryPage.tsx
-const QueryPage: React.FC = () => {
-  const [query, setQuery] = useState('');
-  const [result, setResult] = useState<QueryResult | null>(null);
-  const [loading, setLoading] = useState(false);
-  
-  const executeQuery = useCallback(async () => {
-    setLoading(true);
-    try {
-      const response = await queryAPI.execute({
-        jql: query,
-        startAt: 0,
-        maxResults: 50,
-        fields: selectedFields
-      });
-      setResult(response.data);
-    } catch (error) {
-      showErrorNotification(error.message);
-    } finally {
-      setLoading(false);
-    }
-  }, [query, selectedFields]);
-
-  return (
-    <Container maxWidth="xl">
-      <Box sx={{ mb: 3 }}>
-        <Typography variant="h4">Query Data</Typography>
-        <Typography variant="body1" color="text.secondary">
-          Execute queries against health data indexes
-        </Typography>
-      </Box>
-      
-      <Grid container spacing={3}>
-        <Grid item xs={12}>
-          <Card>
-            <CardContent>
-              <QueryBuilder
-                onQueryChange={setQuery}
-                allowedIndexes={allowedIndexes}
-                availableFields={availableFields}
-              />
-              <Box sx={{ mt: 2, display: 'flex', gap: 2 }}>
-                <Button
-                  variant="contained"
-                  onClick={executeQuery}
-                  disabled={!query || loading}
-                  startIcon={<PlayArrowIcon />}
-                >
-                  Execute Query
-                </Button>
-                <Button
-                  variant="outlined"
-                  onClick={() => setQuery('')}
-                  startIcon={<ClearIcon />}
-                >
-                  Clear
-                </Button>
-              </Box>
-            </CardContent>
-          </Card>
-        </Grid>
-        
-        <Grid item xs={12}>
-          {result && (
-            <Card>
-              <CardHeader
-                title={`Results (${result.total} records)`}
-                action={
-                  <Chip
-                    label={`${result.issues.length} shown`}
-                    color="primary"
-                    variant="outlined"
-                  />
-                }
-              />
-              <CardContent>
-                <DataTable
-                  data={result.issues}
-                  columns={generateColumns(result.fields)}
-                  loading={loading}
-                  totalRows={result.total}
-                  onPageChange={handlePageChange}
-                  onSortChange={handleSortChange}
-                />
-              </CardContent>
-            </Card>
-          )}
-        </Grid>
-      </Grid>
-    </Container>
-  );
-};
-```
-
-### 1.4 Phase 1 Features
-- **Visual Query Builder**: Drag-and-drop query construction
-- **JQL Editor**: Code editor with syntax highlighting
-- **Field Browser**: Explore available fields and their types
-- **Auto-complete**: Smart suggestions for fields and values
-- **Query Validation**: Real-time syntax checking
-- **Results Table**: Sortable, filterable data grid
-- **Pagination**: Server-side pagination for large datasets
-- **Export to CSV**: Basic export functionality
-- **Query History**: Recent queries persistence
-
-### 1.5 Phase 1 Components
-```
-Phase 1 Components:
-├── QueryBuilder/
-│   ├── VisualBuilder.tsx
-│   ├── JQLEditor.tsx
-│   ├── FieldSelector.tsx
-│   └── QueryValidator.tsx
-├── DataTable/
-│   ├── DataGrid.tsx
-│   ├── ColumnConfig.tsx
-│   ├── CustomToolbar.tsx
-│   └── DataExport.tsx
-├── Common/
-│   ├── SearchInput.tsx
-│   ├── LoadingSpinner.tsx
-│   ├── ErrorBoundary.tsx
-│   └── NoDataMessage.tsx
-└── Pages/
-    ├── QueryPage.tsx
-    ├── ResultsPage.tsx
-    └── HistoryPage.tsx
-```
-
----
-
-## Phase 2: Filter Management
-
-**Timeline: 3-4 weeks**
-**Goal: Create, save, edit, and manage query filters**
-
-### 2.1 Filter Manager Component
-```typescript
-// components/filters/FilterManager.tsx
-interface FilterManagerProps {
-  onFilterSelect: (filter: Filter) => void;
-  allowEdit?: boolean;
-}
-
-const FilterManager: React.FC<FilterManagerProps> = ({
-  onFilterSelect,
-  allowEdit = true
-}) => {
-  const [filters, setFilters] = useState<Filter[]>([]);
-  const [searchTerm, setSearchTerm] = useState('');
-  const [sortBy, setSortBy] = useState<'name' | 'created' | 'updated'>('name');
-  
-  return (
-    <Card>
-      <CardHeader
-        title="Saved Filters"
-        action={
-          allowEdit && (
-            <Button
-              variant="contained"
-              startIcon={<AddIcon />}
-              onClick={() => setCreateDialogOpen(true)}
-            >
-              Create Filter
-            </Button>
-          )
-        }
-      />
-      <CardContent>
-        <Box sx={{ mb: 2, display: 'flex', gap: 2 }}>
-          <TextField
-            placeholder="Search filters..."
-            value={searchTerm}
-            onChange={(e) => setSearchTerm(e.target.value)}
-            InputProps={{
-              startAdornment: <SearchIcon />,
-            }}
-            size="small"
-            fullWidth
-          />
-          <FormControl size="small" sx={{ minWidth: 120 }}>
-            <Select value={sortBy} onChange={(e) => setSortBy(e.target.value)}>
-              <MenuItem value="name">Name</MenuItem>
-              <MenuItem value="created">Created</MenuItem>
-              <MenuItem value="updated">Updated</MenuItem>
-            </Select>
-          </FormControl>
-        </Box>
-        
-        <List>
-          {filteredFilters.map((filter) => (
-            <FilterListItem
-              key={filter.id}
-              filter={filter}
-              onSelect={() => onFilterSelect(filter)}
-              onEdit={allowEdit ? handleEditFilter : undefined}
-              onDelete={allowEdit ? handleDeleteFilter : undefined}
-            />
-          ))}
-        </List>
-      </CardContent>
-    </Card>
-  );
-};
-```
-
-### 2.2 Filter Creation Dialog
-```typescript
-// components/filters/FilterDialog.tsx
-interface FilterDialogProps {
-  open: boolean;
-  onClose: () => void;
-  filter?: Filter; // For editing
-  onSave: (filter: Partial<Filter>) => void;
-}
-
-const FilterDialog: React.FC<FilterDialogProps> = ({
-  open,
-  onClose,
-  filter,
-  onSave
-}) => {
-  const { control, handleSubmit, formState: { errors } } = useForm<FilterForm>({
-    resolver: yupResolver(filterSchema),
-    defaultValues: filter || {
-      name: '',
-      description: '',
-      jql: '',
-      favourite: false,
-      tags: [],
-    }
+// ✅ IMPLEMENTED - DirectQuery Component
+const DirectQuery: React.FC = () => {
+  // Shared hooks for consistency
+  const query = useElasticsearchQuery({
+    onResult: (result) => {
+      setLastQueryWasFiltered(queryUsesFiltering);
+      pagination.resetPagination();
+    },
   });
-
-  return (
-    <Dialog open={open} onClose={onClose} maxWidth="md" fullWidth>
-      <DialogTitle>
-        {filter ? 'Edit Filter' : 'Create New Filter'}
-      </DialogTitle>
-      <DialogContent>
-        <Grid container spacing={3} sx={{ mt: 1 }}>
-          <Grid item xs={12} sm={6}>
-            <Controller
-              name="name"
-              control={control}
-              render={({ field }) => (
-                <TextField
-                  {...field}
-                  label="Filter Name"
-                  error={!!errors.name}
-                  helperText={errors.name?.message}
-                  fullWidth
-                  required
-                />
-              )}
-            />
-          </Grid>
-          <Grid item xs={12} sm={6}>
-            <Controller
-              name="tags"
-              control={control}
-              render={({ field }) => (
-                <Autocomplete
-                  {...field}
-                  multiple
-                  options={availableTags}
-                  freeSolo
-                  renderTags={(value, getTagProps) =>
-                    value.map((option, index) => (
-                      <Chip
-                        variant="outlined"
-                        label={option}
-                        {...getTagProps({ index })}
-                      />
-                    ))
-                  }
-                  renderInput={(params) => (
-                    <TextField {...params} label="Tags" />
-                  )}
-                />
-              )}
-            />
-          </Grid>
-          <Grid item xs={12}>
-            <Controller
-              name="description"
-              control={control}
-              render={({ field }) => (
-                <TextField
-                  {...field}
-                  label="Description"
-                  multiline
-                  rows={3}
-                  fullWidth
-                />
-              )}
-            />
-          </Grid>
-          <Grid item xs={12}>
-            <Controller
-              name="jql"
-              control={control}
-              render={({ field }) => (
-                <Box>
-                  <Typography variant="subtitle2" sx={{ mb: 1 }}>
-                    Query (JQL)
-                  </Typography>
-                  <JQLEditor
-                    value={field.value}
-                    onChange={field.onChange}
-                    height="200px"
-                    error={!!errors.jql}
-                  />
-                  {errors.jql && (
-                    <FormHelperText error>
-                      {errors.jql.message}
-                    </FormHelperText>
-                  )}
-                </Box>
-              )}
-            />
-          </Grid>
-          <Grid item xs={12}>
-            <Controller
-              name="favourite"
-              control={control}
-              render={({ field }) => (
-                <FormControlLabel
-                  control={
-                    <Checkbox
-                      checked={field.value}
-                      onChange={field.onChange}
-                    />
-                  }
-                  label="Mark as favourite"
-                />
-              )}
-            />
-          </Grid>
-        </Grid>
-      </DialogContent>
-      <DialogActions>
-        <Button onClick={onClose}>Cancel</Button>
-        <Button
-          variant="contained"
-          onClick={handleSubmit(onSave)}
-          startIcon={<SaveIcon />}
-        >
-          {filter ? 'Update' : 'Create'} Filter
-        </Button>
-      </DialogActions>
-    </Dialog>
-  );
+  const pagination = useElasticsearchPagination(10);
+  
+  // DirectQuery-specific features
+  const [from, setFrom] = useState<number>(0);
+  const [size, setSize] = useState<number>(10);
+  const [selectedColumns, setSelectedColumns] = useState<string[]>([]);
+  // ... column management logic
 };
 ```
 
-### 2.3 Filter Library Page
+#### **Key Features:**
+- **Manual JSON Editing**: Full Elasticsearch query syntax support
+- **Interactive Guidelines**: Tabbed examples (Basic, Filters, Aggregations, Advanced)
+- **Advanced Column Management**: Select/deselect columns with session persistence
+- **Performance Optimization**: `_source` filtering to reduce payload size
+- **Excel Export**: Full dataset export with customizable column selection
+- **ShareableLink Integration**: Generate Auto Query URLs from current filters
+
+### 1.2 Auto Query Interface
+
+#### **Architecture & Features**
 ```typescript
-// pages/filters/FiltersPage.tsx
-const FiltersPage: React.FC = () => {
-  const [selectedFilter, setSelectedFilter] = useState<Filter | null>(null);
-  const [createDialogOpen, setCreateDialogOpen] = useState(false);
-  const [previewData, setPreviewData] = useState<QueryResult | null>(null);
+// ✅ IMPLEMENTED - AutoQuery Component
+const AutoQuery: React.FC = () => {
+  const [searchParams, setSearchParams] = useSearchParams();
+  const query = useElasticsearchQuery();
+  const pagination = useElasticsearchPagination(10);
   
-  const { data: filters, isLoading, refetch } = useGetFiltersQuery();
-  
-  const handleFilterSelect = useCallback(async (filter: Filter) => {
-    setSelectedFilter(filter);
-    // Preview the filter results
-    try {
-      const result = await queryAPI.execute({
-        jql: filter.jql,
-        startAt: 0,
-        maxResults: 10,
-      });
-      setPreviewData(result.data);
-    } catch (error) {
-      showErrorNotification('Failed to preview filter');
-    }
-  }, []);
-
-  return (
-    <Container maxWidth="xl">
-      <Box sx={{ mb: 3, display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
-        <Box>
-          <Typography variant="h4">Filter Library</Typography>
-          <Typography variant="body1" color="text.secondary">
-            Manage and organize your saved query filters
-          </Typography>
-        </Box>
-        <Button
-          variant="contained"
-          startIcon={<AddIcon />}
-          onClick={() => setCreateDialogOpen(true)}
-        >
-          Create Filter
-        </Button>
-      </Box>
-      
-      <Grid container spacing={3}>
-        <Grid item xs={12} md={6}>
-          <FilterManager
-            onFilterSelect={handleFilterSelect}
-            allowEdit={true}
-          />
-        </Grid>
-        <Grid item xs={12} md={6}>
-          {selectedFilter && (
-            <Card>
-              <CardHeader
-                title={selectedFilter.name}
-                subheader={`Created ${formatDate(selectedFilter.metadata.created_at)}`}
-                action={
-                  <Box>
-                    <IconButton onClick={() => handleEditFilter(selectedFilter)}>
-                      <EditIcon />
-                    </IconButton>
-                    <IconButton onClick={() => handleDeleteFilter(selectedFilter.id)}>
-                      <DeleteIcon />
-                    </IconButton>
-                  </Box>
-                }
-              />
-              <CardContent>
-                <Typography variant="body2" sx={{ mb: 2 }}>
-                  {selectedFilter.description}
-                </Typography>
-                
-                {selectedFilter.tags.length > 0 && (
-                  <Box sx={{ mb: 2 }}>
-                    {selectedFilter.tags.map((tag) => (
-                      <Chip key={tag} label={tag} size="small" sx={{ mr: 1 }} />
-                    ))}
-                  </Box>
-                )}
-                
-                <Accordion>
-                  <AccordionSummary expandIcon={<ExpandMoreIcon />}>
-                    <Typography variant="subtitle2">Query (JQL)</Typography>
-                  </AccordionSummary>
-                  <AccordionDetails>
-                    <Paper variant="outlined" sx={{ p: 2, backgroundColor: 'grey.50' }}>
-                      <Typography variant="body2" component="pre" sx={{ fontFamily: 'monospace' }}>
-                        {selectedFilter.jql}
-                      </Typography>
-                    </Paper>
-                  </AccordionDetails>
-                </Accordion>
-                
-                {previewData && (
-                  <Box sx={{ mt: 2 }}>
-                    <Typography variant="subtitle2" sx={{ mb: 1 }}>
-                      Preview ({previewData.total} total results)
-                    </Typography>
-                    <DataTable
-                      data={previewData.issues.slice(0, 5)}
-                      columns={generateColumns(previewData.fields)}
-                      loading={false}
-                      totalRows={5}
-                      onPageChange={() => {}}
-                      onSortChange={() => {}}
-                      hideFooter
-                    />
-                  </Box>
-                )}
-              </CardContent>
-              <CardActions>
-                <Button
-                  variant="contained"
-                  startIcon={<PlayArrowIcon />}
-                  onClick={() => navigateToQuery(selectedFilter.jql)}
-                >
-                  Execute Query
-                </Button>
-                <Button
-                  variant="outlined"
-                  startIcon={<ContentCopyIcon />}
-                  onClick={() => copyToClipboard(selectedFilter.jql)}
-                >
-                  Copy Query
-                </Button>
-              </CardActions>
-            </Card>
-          )}
-        </Grid>
-      </Grid>
-      
-      <FilterDialog
-        open={createDialogOpen}
-        onClose={() => setCreateDialogOpen(false)}
-        onSave={handleCreateFilter}
-      />
-    </Container>
-  );
+  // URL parameter parsing with smart field detection
+  const defaultFilters = useMemo(() => {
+    const filters: DefaultFilter[] = [];
+    searchParams.forEach((value, key) => {
+      // Handle nested field paths with .keyword suffix logic
+      if (key.includes('.')) {
+        const fieldNeedsKeyword = !key.endsWith('.keyword') && 
+                                 !key.includes('_id') && 
+                                 !key.includes('count');
+        filters.push({
+          field: fieldNeedsKeyword ? `${key}.keyword` : key,
+          operator: 'term',
+          value: value,
+          type: 'term',
+          label: `${key}: ${value}`,
+        });
+      }
+      // ... other filter patterns
+    });
+    return filters;
+  }, [searchParams]);
 };
 ```
 
-### 2.4 Phase 2 Features
-- **Filter CRUD**: Create, read, update, delete filters
-- **Filter Library**: Browse and search saved filters
-- **Filter Preview**: Quick preview of filter results
-- **Filter Tagging**: Organize filters with tags
-- **Favorites**: Mark frequently used filters
-- **Filter Sharing**: Share filters with other users
-- **Usage Analytics**: Track filter usage statistics
-- **Bulk Operations**: Delete/tag multiple filters
-- **Import/Export**: Backup and restore filters
+#### **Key Features:**
+- **URL Parameter Parsing**: Automatic filter extraction from URL
+- **Smart Field Handling**: Automatic `.keyword` suffix for text fields
+- **Auto-Execution**: Queries run automatically when conditions are met
+- **Filter Visualization**: Visual chips for applied filters with remove capability
+- **Nested Field Support**: Full support for `Data.boundaryHierarchy.country` syntax
+- **URL Management**: Copy, modify, and share query URLs
+
+### 1.3 Visual Query Builder 🆕
+
+#### **Architecture & Features**
+```typescript
+// ✅ IMPLEMENTED - QueryBuilder Component
+interface QueryBuilderProps {
+  fields: FieldInfo[];
+  loading?: boolean;
+  onQueryGenerated: (query: any) => void;
+}
+
+// Field extraction from Elasticsearch mappings
+export function extractFieldsFromMapping(mapping: any): FieldInfo[] {
+  const fields: FieldInfo[] = [];
+  
+  function traverseMapping(properties: any, path = '') {
+    Object.entries(properties).forEach(([fieldName, fieldDef]: [string, any]) => {
+      const fullPath = path ? `${path}.${fieldName}` : fieldName;
+      
+      if (fieldDef.type) {
+        const fieldInfo: FieldInfo = {
+          name: fieldName,
+          type: fieldDef.type,
+          fullPath,
+          isAnalyzed: fieldDef.type === 'text',
+          isKeyword: fieldDef.type === 'keyword',
+          isNumeric: ['integer', 'long', 'double', 'float'].includes(fieldDef.type),
+          isDate: fieldDef.type === 'date',
+          hasKeywordVariant: fieldDef.fields?.keyword ? true : false,
+        };
+        fields.push(fieldInfo);
+      }
+    });
+  }
+  
+  return fields.sort((a, b) => a.fullPath.localeCompare(b.fullPath));
+}
+```
+
+#### **Key Features:**
+- **Field Discovery**: Automatic field extraction from ES index mappings
+- **Smart Operators**: Context-aware operator suggestions (term, match, range, etc.)
+- **Visual Construction**: Drag-and-drop interface with AND/OR logic
+- **Real-time Preview**: Live Elasticsearch JSON generation
+- **Type Safety**: Full TypeScript support with field type detection
+- **No-Code Experience**: Business users can build queries without JSON knowledge
 
 ---
 
-## Phase 3: Dashboard System
+## Shared Architecture & Components
 
-**Timeline: 6-8 weeks**
-**Goal: Create interactive dashboards with charts and gadgets**
+### 2.1 Custom Hooks Architecture
 
-### 3.1 Dashboard Builder
+#### **useElasticsearchQuery Hook** ✅ **IMPLEMENTED**
 ```typescript
-// components/dashboards/DashboardBuilder.tsx
-import ReactECharts from 'echarts-for-react';
-import { DndContext, DragEndEvent } from '@dnd-kit/core';
+export interface ElasticsearchQueryResult {
+  // State
+  selectedIndex: string;
+  queryText: string;
+  result: DirectQueryResponse | null;
+  loading: boolean;
+  error: string | null;
+  availableIndexes: string[];
+  indexesLoading: boolean;
 
-interface DashboardBuilderProps {
-  dashboard: Dashboard;
-  onSave: (dashboard: Dashboard) => void;
-  editMode: boolean;
+  // Actions
+  setSelectedIndex: (index: string) => void;
+  setQueryText: (text: string) => void;
+  executeQuery: (customFrom?: number, customSize?: number, customSourceFilter?: string[] | boolean) => Promise<void>;
+  clearResults: () => void;
+  formatResultsForTable: (hits: any[]) => { columns: string[]; rows: any[] };
 }
 
-const DashboardBuilder: React.FC<DashboardBuilderProps> = ({
-  dashboard,
-  onSave,
-  editMode
-}) => {
-  const [gadgets, setGadgets] = useState<Gadget[]>(dashboard.gadgets || []);
-  const [selectedGadget, setSelectedGadget] = useState<string | null>(null);
-  
-  const handleDragEnd = (event: DragEndEvent) => {
-    const { active, over } = event;
-    if (over && active.id !== over.id) {
-      // Update gadget positions
-      updateGadgetPositions(active.id, over.id);
-    }
-  };
-
-  return (
-    <Box sx={{ height: '100vh', display: 'flex', flexDirection: 'column' }}>
-      {editMode && (
-        <DashboardToolbar
-          onAddGadget={handleAddGadget}
-          onSave={() => onSave({ ...dashboard, gadgets })}
-          onPreview={() => setEditMode(false)}
-        />
-      )}
-      
-      <DndContext onDragEnd={handleDragEnd}>
-        <Grid container spacing={2} sx={{ flex: 1, p: 2, overflow: 'auto' }}>
-          {gadgets.map((gadget) => (
-            <Grid
-              key={gadget.id}
-              item
-              xs={gadget.position.width}
-              sx={{ height: gadget.position.height * 100 }}
-            >
-              <GadgetContainer
-                gadget={gadget}
-                selected={selectedGadget === gadget.id}
-                editMode={editMode}
-                onSelect={() => setSelectedGadget(gadget.id)}
-                onUpdate={handleUpdateGadget}
-                onDelete={handleDeleteGadget}
-              />
-            </Grid>
-          ))}
-        </Grid>
-      </DndContext>
-      
-      {editMode && (
-        <GadgetSidebar
-          open={!!selectedGadget}
-          gadget={gadgets.find(g => g.id === selectedGadget)}
-          onClose={() => setSelectedGadget(null)}
-          onUpdate={handleUpdateGadget}
-        />
-      )}
-    </Box>
-  );
+// Centralized query logic used by all three interfaces
+export const useElasticsearchQuery = (options: UseElasticsearchQueryOptions = {}): ElasticsearchQueryResult => {
+  // ... 200+ lines of shared query logic
 };
 ```
 
-### 3.2 Chart Components
+#### **useElasticsearchPagination Hook** ✅ **IMPLEMENTED**
 ```typescript
-// components/charts/ChartGadget.tsx
-interface ChartGadgetProps {
-  gadget: Gadget;
-  data: any[];
-  loading: boolean;
+export interface ElasticsearchPaginationResult {
+  page: number;
+  rowsPerPage: number;
+  handleChangePage: (event: unknown, newPage: number) => void;
+  handleChangeRowsPerPage: (event: React.ChangeEvent<HTMLInputElement>) => void;
+  getPaginatedHits: (result: DirectQueryResponse | null) => any[];
+  resetPagination: () => void;
 }
 
-const ChartGadget: React.FC<ChartGadgetProps> = ({ gadget, data, loading }) => {
-  const chartOptions = useMemo(() => {
-    switch (gadget.type) {
-      case 'pie-chart':
-        return generatePieChartOptions(data, gadget.config);
-      case 'bar-chart':
-        return generateBarChartOptions(data, gadget.config);
-      case 'line-chart':
-        return generateLineChartOptions(data, gadget.config);
-      default:
-        return {};
-    }
-  }, [data, gadget.type, gadget.config]);
+// Reusable pagination logic across all interfaces
+export const useElasticsearchPagination = (initialRowsPerPage: number = 10): ElasticsearchPaginationResult => {
+  // ... pagination state and handlers
+};
+```
 
-  if (loading) {
-    return <ChartSkeleton />;
+### 2.2 Shared Component Architecture
+
+#### **QueryExecutionCard Component** ✅ **IMPLEMENTED**
+```typescript
+export interface QueryExecutionCardProps {
+  // Index selection
+  selectedIndex: string;
+  availableIndexes: string[];
+  onIndexChange: (index: string) => void;
+  indexesLoading: boolean;
+
+  // Query configuration  
+  queryText: string;
+  onQueryChange: (event: React.ChangeEvent<HTMLTextAreaElement>) => void;
+  
+  // Execution
+  onExecute: () => void;
+  onClear: () => void;
+  loading: boolean;
+
+  // Optional DirectQuery specific props
+  showFromSize?: boolean;
+  from?: number;
+  size?: number;
+  onFromChange?: (from: number) => void;
+  onSizeChange?: (size: number) => void;
+
+  // Customization
+  title?: string;
+  showQueryGuidelines?: boolean;
+  showShareableLink?: boolean;
+  children?: React.ReactNode; // For additional buttons
+}
+
+// Reusable query interface used by all three pages
+const QueryExecutionCard: React.FC<QueryExecutionCardProps> = ({ ... }) => {
+  // Unified query execution interface
+};
+```
+
+#### **QueryResultsSection Component** ✅ **IMPLEMENTED**
+```typescript
+export interface QueryResultsSectionProps {
+  // Data
+  result: DirectQueryResponse | null;
+  error: string | null;
+  loading: boolean;
+
+  // Table data
+  columns: string[];
+  rows: TableRow[];
+  page: number;
+  rowsPerPage: number;
+  totalHits: number;
+
+  // Event handlers
+  onPageChange: (event: unknown, newPage: number) => void;
+  onRowsPerPageChange: (event: React.ChangeEvent<HTMLInputElement>) => void;
+  onRetryError?: () => void;
+
+  // Configuration
+  selectedIndex: string;
+  emptyMessage?: string;
+  showAggregations?: boolean;
+  
+  // Additional custom content
+  additionalActions?: React.ReactNode;
+  children?: React.ReactNode;
+}
+
+// Unified results display with aggregations, table, and export
+const QueryResultsSection: React.FC<QueryResultsSectionProps> = ({ ... }) => {
+  // Shared results rendering logic
+};
+```
+
+### 2.3 API Architecture
+
+#### **Elasticsearch API Client** ✅ **IMPLEMENTED**
+```typescript
+// Enhanced API service with structured error handling
+class ApiService {
+  private client: AxiosInstance;
+
+  constructor() {
+    this.client = axios.create({
+      baseURL: '/api',
+      timeout: 30000,
+      headers: { 'Content-Type': 'application/json' },
+    });
+
+    // Request interceptor for tracking and metadata
+    this.client.interceptors.request.use((config) => {
+      config.headers['X-Request-ID'] = this.generateRequestId();
+      config.metadata = { startTime: Date.now() };
+      return config;
+    });
+
+    // Response interceptor for error transformation
+    this.client.interceptors.response.use(
+      (response) => response,
+      (error) => {
+        const apiError = {
+          message: error.response?.data?.error?.message || error.message,
+          code: error.response?.data?.error?.code || 'UNKNOWN_ERROR',
+          status: error.response?.status || 500,
+          details: error.response?.data?.error?.details,
+        };
+        return Promise.reject(apiError);
+      }
+    );
   }
 
-  return (
-    <Card sx={{ height: '100%' }}>
-      <CardHeader
-        title={gadget.title}
-        action={
-          <IconButton size="small">
-            <MoreVertIcon />
-          </IconButton>
-        }
-      />
-      <CardContent sx={{ height: 'calc(100% - 64px)' }}>
-        <ReactECharts
-          option={chartOptions}
-          style={{ height: '100%', width: '100%' }}
-          opts={{ renderer: 'svg' }}
-        />
-      </CardContent>
-    </Card>
-  );
-};
+  // Direct query execution
+  async executeDirectQuery(request: DirectQueryRequest): Promise<DirectQueryResponse> {
+    const response = await this.client.post<ApiResponse<DirectQueryResponse>>('/direct-query', request);
+    if (!response.data.success || !response.data.data) {
+      throw new Error(response.data.error?.message || 'Direct query execution failed');
+    }
+    return response.data.data;
+  }
 
-// Chart option generators
-const generatePieChartOptions = (data: any[], config: GadgetConfig) => ({
-  tooltip: {
-    trigger: 'item',
-    formatter: '{a} <br/>{b}: {c} ({d}%)'
-  },
-  legend: {
-    orient: 'vertical',
-    left: 'left',
-    show: config.show_legend !== false
-  },
-  series: [
-    {
-      name: config.title || 'Data',
-      type: 'pie',
-      radius: config.radius || '50%',
-      data: data.map(item => ({
-        value: item.count,
-        name: item.name
-      })),
-      emphasis: {
-        itemStyle: {
-          shadowBlur: 10,
-          shadowOffsetX: 0,
-          shadowColor: 'rgba(0, 0, 0, 0.5)'
-        }
-      }
+  // Index discovery
+  async getAvailableIndexes(): Promise<string[]> {
+    const response = await this.client.get<ApiResponse<string[]>>('/direct-query/indexes');
+    if (!response.data.success || !response.data.data) {
+      throw new Error(response.data.error?.message || 'Failed to get available indexes');
     }
-  ]
-});
+    return response.data.data;
+  }
 
-const generateBarChartOptions = (data: any[], config: GadgetConfig) => ({
-  tooltip: {
-    trigger: 'axis',
-    axisPointer: {
-      type: 'shadow'
+  // ✅ NEW - Field mapping discovery for QueryBuilder
+  async getIndexMapping(indexName: string): Promise<any> {
+    const response = await this.client.get<ApiResponse<any>>(`/direct-query/indexes/${indexName}/mapping`);
+    if (!response.data.success || !response.data.data) {
+      throw new Error(response.data.error?.message || 'Failed to get index mapping');
     }
-  },
-  grid: {
-    left: '3%',
-    right: '4%',
-    bottom: '3%',
-    containLabel: true
-  },
-  xAxis: [
-    {
-      type: 'category',
-      data: data.map(item => item.name),
-      axisTick: {
-        alignWithLabel: true
-      }
-    }
-  ],
-  yAxis: [
-    {
-      type: 'value'
-    }
-  ],
-  series: [
-    {
-      name: config.title || 'Data',
-      type: 'bar',
-      barWidth: '60%',
-      data: data.map(item => item.count),
-      itemStyle: {
-        color: config.color || '#1976d2'
-      }
-    }
-  ]
-});
-```
+    return response.data.data;
+  }
+}
 
-### 3.3 Dashboard Management
-```typescript
-// pages/dashboards/DashboardsPage.tsx
-const DashboardsPage: React.FC = () => {
-  const [view, setView] = useState<'grid' | 'list'>('grid');
-  const [searchTerm, setSearchTerm] = useState('');
-  const [createDialogOpen, setCreateDialogOpen] = useState(false);
-  
-  const { data: dashboards, isLoading } = useGetDashboardsQuery();
-  
-  return (
-    <Container maxWidth="xl">
-      <Box sx={{ mb: 3, display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
-        <Box>
-          <Typography variant="h4">Dashboards</Typography>
-          <Typography variant="body1" color="text.secondary">
-            Create and manage your data visualization dashboards
-          </Typography>
-        </Box>
-        <Box sx={{ display: 'flex', gap: 2 }}>
-          <ToggleButtonGroup
-            value={view}
-            exclusive
-            onChange={(_, newView) => newView && setView(newView)}
-            size="small"
-          >
-            <ToggleButton value="grid">
-              <GridViewIcon />
-            </ToggleButton>
-            <ToggleButton value="list">
-              <ListIcon />
-            </ToggleButton>
-          </ToggleButtonGroup>
-          <Button
-            variant="contained"
-            startIcon={<AddIcon />}
-            onClick={() => setCreateDialogOpen(true)}
-          >
-            Create Dashboard
-          </Button>
-        </Box>
-      </Box>
-      
-      <Box sx={{ mb: 3 }}>
-        <TextField
-          placeholder="Search dashboards..."
-          value={searchTerm}
-          onChange={(e) => setSearchTerm(e.target.value)}
-          InputProps={{
-            startAdornment: <SearchIcon />,
-          }}
-          size="small"
-          sx={{ width: 300 }}
-        />
-      </Box>
-      
-      {view === 'grid' ? (
-        <Grid container spacing={3}>
-          {filteredDashboards.map((dashboard) => (
-            <Grid item xs={12} sm={6} md={4} key={dashboard.id}>
-              <DashboardCard
-                dashboard={dashboard}
-                onOpen={() => navigate(`/dashboards/${dashboard.id}`)}
-                onEdit={() => navigate(`/dashboards/${dashboard.id}/edit`)}
-                onDelete={() => handleDeleteDashboard(dashboard.id)}
-              />
-            </Grid>
-          ))}
-        </Grid>
-      ) : (
-        <DashboardsList
-          dashboards={filteredDashboards}
-          onOpen={(id) => navigate(`/dashboards/${id}`)}
-          onEdit={(id) => navigate(`/dashboards/${id}/edit`)}
-          onDelete={handleDeleteDashboard}
-        />
-      )}
-      
-      <CreateDashboardDialog
-        open={createDialogOpen}
-        onClose={() => setCreateDialogOpen(false)}
-        onSave={handleCreateDashboard}
-      />
-    </Container>
-  );
+// Exported API interface
+export const directQueryAPI = {
+  execute: (request: DirectQueryRequest) => apiService.executeDirectQuery(request),
+  getIndexes: () => apiService.getAvailableIndexes(),
+  getIndexMapping: (indexName: string) => apiService.getIndexMapping(indexName), // ✅ NEW
 };
 ```
-
-### 3.4 Phase 3 Features
-- **Dashboard Builder**: Drag-and-drop interface for creating dashboards
-- **Chart Library**: Pie, bar, line, area, scatter charts using ECharts
-- **Gadget System**: Reusable chart and data components
-- **Layout Management**: Grid-based responsive layouts
-- **Dashboard Templates**: Pre-built dashboard templates
-- **Real-time Updates**: Auto-refresh capabilities
-- **Dashboard Sharing**: Share dashboards with teams
-- **Export Options**: Export dashboards as images/PDFs
-- **Responsive Design**: Mobile-friendly dashboard viewing
 
 ---
 
-## Phase 4: Export Functionality
+## Phase 2: Advanced Features (Planned)
 
-**Timeline: 3-4 weeks**
-**Goal: Comprehensive data export with process tracking**
+### 2.1 Filter Management System
+- **Filter Library**: Save and organize frequently used queries
+- **Filter Sharing**: Team collaboration on query filters  
+- **Filter Templates**: Pre-built industry-specific filters
+- **Advanced Search**: Full-text search across saved filters
 
-### 4.1 Export Manager
-```typescript
-// components/exports/ExportManager.tsx
-interface ExportManagerProps {
-  filterId?: string;
-  onExportInitiated?: (processId: string) => void;
-}
+### 2.2 Dashboard & Visualization System
+- **Dashboard Builder**: Drag-and-drop dashboard creation
+- **Chart Library**: Apache ECharts integration for data visualization
+- **Real-time Updates**: Live dashboard refresh capabilities
+- **Responsive Layouts**: Mobile-friendly dashboard viewing
 
-const ExportManager: React.FC<ExportManagerProps> = ({
-  filterId,
-  onExportInitiated
-}) => {
-  const [exportDialogOpen, setExportDialogOpen] = useState(false);
-  const [processes, setProcesses] = useState<ExportProcess[]>([]);
-  
-  const { data: exportProcesses, refetch } = useGetExportProcessesQuery();
-  
-  return (
-    <Box>
-      <Box sx={{ mb: 3, display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
-        <Typography variant="h5">Export Center</Typography>
-        <Button
-          variant="contained"
-          startIcon={<FileDownloadIcon />}
-          onClick={() => setExportDialogOpen(true)}
-          disabled={!filterId}
-        >
-          New Export
-        </Button>
-      </Box>
-      
-      <Grid container spacing={3}>
-        <Grid item xs={12} md={8}>
-          <Card>
-            <CardHeader title="Export Processes" />
-            <CardContent>
-              <ExportProcessList
-                processes={exportProcesses || []}
-                onRefresh={refetch}
-                onDownload={handleDownload}
-                onCancel={handleCancelExport}
-              />
-            </CardContent>
-          </Card>
-        </Grid>
-        
-        <Grid item xs={12} md={4}>
-          <ExportStatsCard processes={exportProcesses || []} />
-        </Grid>
-      </Grid>
-      
-      <ExportDialog
-        open={exportDialogOpen}
-        onClose={() => setExportDialogOpen(false)}
-        filterId={filterId}
-        onExportInitiated={(processId) => {
-          onExportInitiated?.(processId);
-          refetch();
-        }}
-      />
-    </Box>
-  );
-};
-```
-
-### 4.2 Export Process Tracker
-```typescript
-// components/exports/ExportProcessTracker.tsx
-interface ExportProcessTrackerProps {
-  process: ExportProcess;
-  onDownload: (processId: string) => void;
-  onCancel: (processId: string) => void;
-}
-
-const ExportProcessTracker: React.FC<ExportProcessTrackerProps> = ({
-  process,
-  onDownload,
-  onCancel
-}) => {
-  const getStatusColor = (status: string): 'primary' | 'warning' | 'success' | 'error' => {
-    switch (status) {
-      case 'initiated': return 'primary';
-      case 'processing': return 'warning';
-      case 'completed': return 'success';
-      case 'failed': return 'error';
-      default: return 'primary';
-    }
-  };
-  
-  const getStatusIcon = (status: string) => {
-    switch (status) {
-      case 'initiated': return <HourglassEmptyIcon />;
-      case 'processing': return <AutorenewIcon className="animate-spin" />;
-      case 'completed': return <CheckCircleIcon />;
-      case 'failed': return <ErrorIcon />;
-      default: return <HelpIcon />;
-    }
-  };
-
-  return (
-    <Card sx={{ mb: 2 }}>
-      <CardContent>
-        <Box sx={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start' }}>
-          <Box sx={{ flex: 1 }}>
-            <Box sx={{ display: 'flex', alignItems: 'center', mb: 1 }}>
-              {getStatusIcon(process.status)}
-              <Typography variant="h6" sx={{ ml: 1 }}>
-                Export #{process.id.slice(-8)}
-              </Typography>
-              <Chip
-                label={process.status.toUpperCase()}
-                color={getStatusColor(process.status)}
-                size="small"
-                sx={{ ml: 2 }}
-              />
-            </Box>
-            
-            <Typography variant="body2" color="text.secondary" sx={{ mb: 1 }}>
-              Format: {process.format.toUpperCase()} | 
-              Filter: {process.filter_name} |
-              Created: {formatDate(process.metadata.initiated_at)}
-            </Typography>
-            
-            {process.status === 'processing' && (
-              <Box sx={{ mt: 2 }}>
-                <Box sx={{ display: 'flex', justifyContent: 'space-between', mb: 1 }}>
-                  <Typography variant="body2">Progress</Typography>
-                  <Typography variant="body2">{process.progress}%</Typography>
-                </Box>
-                <LinearProgress
-                  variant="determinate"
-                  value={process.progress}
-                  sx={{ height: 8, borderRadius: 4 }}
-                />
-                <Typography variant="caption" color="text.secondary" sx={{ mt: 1, display: 'block' }}>
-                  Processed {process.records_processed.toLocaleString()} of {process.total_records.toLocaleString()} records
-                </Typography>
-              </Box>
-            )}
-            
-            {process.status === 'completed' && (
-              <Box sx={{ mt: 2 }}>
-                <Typography variant="body2" color="success.main">
-                  ✓ {process.records_processed.toLocaleString()} records exported successfully
-                </Typography>
-                <Typography variant="caption" color="text.secondary">
-                  File expires: {formatDate(process.metadata.expires_at)}
-                </Typography>
-              </Box>
-            )}
-            
-            {process.status === 'failed' && (
-              <Alert severity="error" sx={{ mt: 2 }}>
-                <AlertTitle>Export Failed</AlertTitle>
-                {process.error_info?.error_message}
-              </Alert>
-            )}
-          </Box>
-          
-          <Box sx={{ display: 'flex', gap: 1 }}>
-            {process.status === 'completed' && (
-              <Tooltip title="Download file">
-                <IconButton
-                  color="primary"
-                  onClick={() => onDownload(process.id)}
-                >
-                  <FileDownloadIcon />
-                </IconButton>
-              </Tooltip>
-            )}
-            
-            {(process.status === 'initiated' || process.status === 'processing') && (
-              <Tooltip title="Cancel export">
-                <IconButton
-                  color="error"
-                  onClick={() => onCancel(process.id)}
-                >
-                  <CancelIcon />
-                </IconButton>
-              </Tooltip>
-            )}
-            
-            <Tooltip title="Copy filestore info">
-              <IconButton
-                onClick={() => copyFilestoreInfo(process)}
-              >
-                <ContentCopyIcon />
-              </IconButton>
-            </Tooltip>
-          </Box>
-        </Box>
-      </CardContent>
-    </Card>
-  );
-};
-```
-
-### 4.3 Export Configuration Dialog
-```typescript
-// components/exports/ExportDialog.tsx
-interface ExportDialogProps {
-  open: boolean;
-  onClose: () => void;
-  filterId?: string;
-  onExportInitiated: (processId: string) => void;
-}
-
-const ExportDialog: React.FC<ExportDialogProps> = ({
-  open,
-  onClose,
-  filterId,
-  onExportInitiated
-}) => {
-  const { control, handleSubmit, watch, formState: { errors } } = useForm<ExportRequest>({
-    defaultValues: {
-      filterId: filterId || '',
-      format: 'csv',
-      fields: [],
-      maxResults: 10000,
-    }
-  });
-  
-  const selectedFormat = watch('format');
-  const { data: filter } = useGetFilterQuery(filterId!, { skip: !filterId });
-  const { data: availableFields } = useGetFieldsQuery();
-  
-  const onSubmit = async (data: ExportRequest) => {
-    try {
-      const response = await exportAPI.initiateExport(data);
-      onExportInitiated(response.data.processId);
-      onClose();
-      showSuccessNotification('Export started successfully');
-    } catch (error) {
-      showErrorNotification('Failed to start export');
-    }
-  };
-
-  return (
-    <Dialog open={open} onClose={onClose} maxWidth="md" fullWidth>
-      <DialogTitle>Configure Export</DialogTitle>
-      <DialogContent>
-        <Grid container spacing={3} sx={{ mt: 1 }}>
-          <Grid item xs={12}>
-            <Controller
-              name="filterId"
-              control={control}
-              render={({ field }) => (
-                <Autocomplete
-                  {...field}
-                  options={availableFilters}
-                  getOptionLabel={(option) => option.name}
-                  renderInput={(params) => (
-                    <TextField
-                      {...params}
-                      label="Filter"
-                      error={!!errors.filterId}
-                      helperText={errors.filterId?.message}
-                      required
-                    />
-                  )}
-                  value={availableFilters.find(f => f.id === field.value) || null}
-                  onChange={(_, value) => field.onChange(value?.id || '')}
-                />
-              )}
-            />
-          </Grid>
-          
-          <Grid item xs={12} sm={6}>
-            <Controller
-              name="format"
-              control={control}
-              render={({ field }) => (
-                <FormControl fullWidth>
-                  <InputLabel>Export Format</InputLabel>
-                  <Select {...field} label="Export Format">
-                    <MenuItem value="csv">CSV</MenuItem>
-                    <MenuItem value="excel">Excel (.xlsx)</MenuItem>
-                    <MenuItem value="json">JSON</MenuItem>
-                    <MenuItem value="pdf">PDF Report</MenuItem>
-                  </Select>
-                </FormControl>
-              )}
-            />
-          </Grid>
-          
-          <Grid item xs={12} sm={6}>
-            <Controller
-              name="maxResults"
-              control={control}
-              render={({ field }) => (
-                <TextField
-                  {...field}
-                  label="Max Records"
-                  type="number"
-                  InputProps={{
-                    inputProps: { min: 1, max: 100000 }
-                  }}
-                  helperText="Maximum number of records to export"
-                  fullWidth
-                />
-              )}
-            />
-          </Grid>
-          
-          <Grid item xs={12}>
-            <Controller
-              name="fields"
-              control={control}
-              render={({ field }) => (
-                <Autocomplete
-                  {...field}
-                  multiple
-                  options={availableFields || []}
-                  getOptionLabel={(option) => option.name}
-                  renderTags={(value, getTagProps) =>
-                    value.map((option, index) => (
-                      <Chip
-                        variant="outlined"
-                        label={option.name}
-                        {...getTagProps({ index })}
-                      />
-                    ))
-                  }
-                  renderInput={(params) => (
-                    <TextField
-                      {...params}
-                      label="Fields to Export"
-                      helperText="Leave empty to export all fields"
-                    />
-                  )}
-                />
-              )}
-            />
-          </Grid>
-          
-          {selectedFormat === 'pdf' && (
-            <Grid item xs={12}>
-              <Alert severity="info">
-                PDF export will generate a formatted report with charts and summary statistics.
-                Large datasets may take longer to process.
-              </Alert>
-            </Grid>
-          )}
-        </Grid>
-      </DialogContent>
-      <DialogActions>
-        <Button onClick={onClose}>Cancel</Button>
-        <Button
-          variant="contained"
-          onClick={handleSubmit(onSubmit)}
-          startIcon={<FileDownloadIcon />}
-        >
-          Start Export
-        </Button>
-      </DialogActions>
-    </Dialog>
-  );
-};
-```
-
-### 4.4 Phase 4 Features
-- **Multiple Formats**: CSV, Excel, JSON, PDF exports
-- **Process Tracking**: Real-time export progress monitoring
-- **Background Processing**: Non-blocking export operations
-- **File Management**: Integration with DIGIT Filestore
-- **Export History**: Track and manage past exports
-- **Bulk Operations**: Export multiple filters at once
-- **Scheduled Exports**: Set up recurring export jobs
+### 2.3 Enhanced Export System
+- **Multiple Formats**: CSV, Excel, JSON, PDF export options
+- **Scheduled Exports**: Automated report generation
 - **Export Templates**: Pre-configured export settings
-- **Error Handling**: Robust error reporting and retry logic
+- **Bulk Operations**: Mass export capabilities
+
+### 2.4 Advanced User Experience
+- **Interactive Tutorials**: Step-by-step onboarding guides
+- **Contextual Help**: In-app help system and documentation
+- **Keyboard Shortcuts**: Power user productivity features
+- **Accessibility**: WCAG 2.1 AA compliance enhancements
 
 ---
 
-## Phase 5: Documentation & UX
+## Implementation Insights
 
-**Timeline: 2-3 weeks**
-**Goal: User onboarding, help system, and documentation**
+### Architecture Decisions ✅ **PROVEN SUCCESSFUL**
 
-### 5.1 Interactive Tutorial System
+#### **1. Shared Hook Architecture**
+**Decision**: Extract common query logic into reusable hooks
+**Result**: 
+- ✅ ~400+ lines of duplicate code eliminated
+- ✅ Consistent behavior across all three interfaces
+- ✅ Easier maintenance and bug fixes
+- ✅ Improved code reusability
+
+#### **2. Component Composition Pattern**
+**Decision**: Build reusable component cards instead of monolithic pages
+**Result**:
+- ✅ QueryExecutionCard: Reused across 3 interfaces with different configurations
+- ✅ QueryResultsSection: Consistent results display with customization options
+- ✅ Flexible composition allowing interface-specific features
+
+#### **3. URL-Driven Architecture for Auto Query**
+**Decision**: Use URL parameters as the single source of truth
+**Result**:
+- ✅ Bookmarkable queries with full state preservation
+- ✅ Easy sharing of complex filtered queries
+- ✅ Dashboard integration capability through URLs
+- ✅ Automatic query execution for embedded use cases
+
+#### **4. Field Discovery Through Elasticsearch Mappings**
+**Decision**: Dynamically fetch field information from ES instead of hardcoding
+**Result**:
+- ✅ Automatic adaptation to different index structures
+- ✅ Smart operator suggestions based on actual field types
+- ✅ Support for nested fields and complex data structures
+- ✅ No manual configuration required for new indices
+
+### Performance Optimizations ✅ **IMPLEMENTED**
+
+#### **1. `_source` Field Filtering**
 ```typescript
-// components/help/TutorialManager.tsx
-import { useTour } from '@reactour/tour';
+// DirectQuery optimization: Only fetch selected columns
+const sourceFilter = selectedColumns.length > 0 
+  ? selectedColumns.filter(col => !col.startsWith('_'))
+  : true;
 
-const TutorialManager: React.FC = () => {
-  const { setIsOpen, setCurrentStep, setSteps } = useTour();
-  
-  const tutorials = {
-    'getting-started': {
-      title: 'Getting Started with DHR',
-      steps: [
-        {
-          selector: '[data-tour="query-builder"]',
-          content: 'Start by building your query here. You can use the visual builder or write JQL directly.',
-        },
-        {
-          selector: '[data-tour="execute-button"]',
-          content: 'Click here to execute your query and see the results.',
-        },
-        {
-          selector: '[data-tour="results-table"]',
-          content: 'Your query results will appear in this table. You can sort, filter, and export the data.',
-        },
-      ],
-    },
-    'creating-filters': {
-      title: 'Creating and Managing Filters',
-      steps: [
-        {
-          selector: '[data-tour="save-filter"]',
-          content: 'Save frequently used queries as filters for quick access.',
-        },
-        {
-          selector: '[data-tour="filter-library"]',
-          content: 'Access your saved filters from the Filter Library.',
-        },
-      ],
-    },
-    'building-dashboards': {
-      title: 'Building Dashboards',
-      steps: [
-        {
-          selector: '[data-tour="dashboard-builder"]',
-          content: 'Use the dashboard builder to create interactive visualizations.',
-        },
-        {
-          selector: '[data-tour="add-gadget"]',
-          content: 'Add charts and data widgets to your dashboard.',
-        },
-      ],
-    },
-  };
-
-  return (
-    <Box>
-      <Typography variant="h5" sx={{ mb: 3 }}>Interactive Tutorials</Typography>
-      <Grid container spacing={2}>
-        {Object.entries(tutorials).map(([key, tutorial]) => (
-          <Grid item xs={12} sm={6} md={4} key={key}>
-            <Card>
-              <CardContent>
-                <Typography variant="h6" sx={{ mb: 1 }}>
-                  {tutorial.title}
-                </Typography>
-                <Typography variant="body2" color="text.secondary" sx={{ mb: 2 }}>
-                  {tutorial.steps.length} steps
-                </Typography>
-                <Button
-                  variant="contained"
-                  fullWidth
-                  onClick={() => startTutorial(key)}
-                >
-                  Start Tutorial
-                </Button>
-              </CardContent>
-            </Card>
-          </Grid>
-        ))}
-      </Grid>
-    </Box>
-  );
+const request: DirectQueryRequest = {
+  index: selectedIndex,
+  query: parsedQuery,
+  _source: sourceFilter, // ✅ Reduces response payload size
 };
 ```
 
-### 5.2 Help System
+#### **2. Session-Based Column Preferences**
 ```typescript
-// components/help/HelpCenter.tsx
-const HelpCenter: React.FC = () => {
-  const [searchTerm, setSearchTerm] = useState('');
-  const [selectedCategory, setSelectedCategory] = useState<string>('all');
-  
-  const helpArticles = [
-    {
-      id: '1',
-      title: 'Getting Started with DHR',
-      category: 'basics',
-      content: 'Learn the fundamentals...',
-      tags: ['beginner', 'overview'],
-    },
-    {
-      id: '2',
-      title: 'Writing JQL Queries',
-      category: 'queries',
-      content: 'Master the JQL syntax...',
-      tags: ['jql', 'queries', 'syntax'],
-    },
-    // ... more articles
-  ];
-
-  return (
-    <Container maxWidth="lg">
-      <Box sx={{ mb: 4 }}>
-        <Typography variant="h3" sx={{ mb: 2 }}>Help Center</Typography>
-        <Typography variant="body1" color="text.secondary">
-          Find answers and learn how to use DHR effectively
-        </Typography>
-      </Box>
-      
-      <Grid container spacing={4}>
-        <Grid item xs={12} md={3}>
-          <Card>
-            <CardContent>
-              <Typography variant="h6" sx={{ mb: 2 }}>Categories</Typography>
-              <List>
-                {categories.map((category) => (
-                  <ListItem
-                    key={category.id}
-                    button
-                    selected={selectedCategory === category.id}
-                    onClick={() => setSelectedCategory(category.id)}
-                  >
-                    <ListItemIcon>
-                      {category.icon}
-                    </ListItemIcon>
-                    <ListItemText primary={category.name} />
-                  </ListItem>
-                ))}
-              </List>
-            </CardContent>
-          </Card>
-        </Grid>
-        
-        <Grid item xs={12} md={9}>
-          <Box sx={{ mb: 3 }}>
-            <TextField
-              placeholder="Search help articles..."
-              value={searchTerm}
-              onChange={(e) => setSearchTerm(e.target.value)}
-              InputProps={{
-                startAdornment: <SearchIcon />,
-              }}
-              fullWidth
-            />
-          </Box>
-          
-          <Grid container spacing={2}>
-            {filteredArticles.map((article) => (
-              <Grid item xs={12} sm={6} key={article.id}>
-                <Card>
-                  <CardContent>
-                    <Typography variant="h6" sx={{ mb: 1 }}>
-                      {article.title}
-                    </Typography>
-                    <Typography variant="body2" color="text.secondary" sx={{ mb: 2 }}>
-                      {article.excerpt}
-                    </Typography>
-                    <Box sx={{ display: 'flex', gap: 1, mb: 2 }}>
-                      {article.tags.slice(0, 3).map((tag) => (
-                        <Chip key={tag} label={tag} size="small" variant="outlined" />
-                      ))}
-                    </Box>
-                    <Button variant="outlined" size="small">
-                      Read More
-                    </Button>
-                  </CardContent>
-                </Card>
-              </Grid>
-            ))}
-          </Grid>
-        </Grid>
-      </Grid>
-    </Container>
-  );
-};
+// Column preferences persist across sessions per index
+const savedColumns = getSelectedColumnsForIndex(selectedIndex);
+if (savedColumns && savedColumns.length > 0) {
+  setSelectedColumns(savedColumns);
+}
 ```
 
-### 5.3 User Onboarding
+#### **3. Smart Pagination**
 ```typescript
-// components/onboarding/OnboardingFlow.tsx
-const OnboardingFlow: React.FC = () => {
-  const [currentStep, setCurrentStep] = useState(0);
-  const [userProfile, setUserProfile] = useState<UserProfile>({});
-  
-  const onboardingSteps = [
-    {
-      title: 'Welcome to DHR',
-      component: <WelcomeStep />,
-    },
-    {
-      title: 'Set Up Your Profile',
-      component: <ProfileSetupStep onUpdate={setUserProfile} />,
-    },
-    {
-      title: 'Choose Your Interests',
-      component: <InterestsStep />,
-    },
-    {
-      title: 'Sample Dashboard',
-      component: <SampleDashboardStep />,
-    },
-    {
-      title: 'You\'re All Set!',
-      component: <CompletionStep />,
-    },
-  ];
+// Client-side pagination for small datasets, server-side ready
+const getPaginatedHits = useCallback(() => {
+  if (!result?.hits?.hits) return [];
+  const start = page * rowsPerPage;
+  const end = start + rowsPerPage;
+  return result.hits.hits.slice(start, end);
+}, [result, page, rowsPerPage]);
+```
 
-  return (
-    <Dialog open maxWidth="md" fullWidth>
-      <DialogContent>
-        <Box sx={{ display: 'flex', alignItems: 'center', mb: 3 }}>
-          <Stepper activeStep={currentStep} sx={{ flex: 1 }}>
-            {onboardingSteps.map((step, index) => (
-              <Step key={index}>
-                <StepLabel>{step.title}</StepLabel>
-              </Step>
-            ))}
-          </Stepper>
-        </Box>
-        
-        <Box sx={{ minHeight: 400 }}>
-          {onboardingSteps[currentStep].component}
-        </Box>
-      </DialogContent>
-      
-      <DialogActions>
-        <Button
-          onClick={() => setCurrentStep(Math.max(0, currentStep - 1))}
-          disabled={currentStep === 0}
-        >
-          Back
-        </Button>
-        <Button
-          variant="contained"
-          onClick={() => {
-            if (currentStep === onboardingSteps.length - 1) {
-              completeOnboarding();
-            } else {
-              setCurrentStep(currentStep + 1);
+### User Experience Achievements ✅ **DELIVERED**
+
+#### **1. Progressive Complexity**
+- **QueryBuilder**: Visual, no-code interface for beginners
+- **AutoQuery**: URL-driven for dashboard embedding and sharing
+- **DirectQuery**: Full JSON control for power users
+
+#### **2. Consistent Error Handling**
+```typescript
+// Structured error messages with actionable suggestions
+if (err.details && err.details.includes('index_not_found_exception')) {
+  const indexMatch = err.details.match(/no such index \[([^\]]+)\]/);
+  if (indexMatch) {
+    errorMessage = `Index '${indexMatch[1]}' not found. Please check if the index exists and try again.`;
+  }
+}
+```
+
+#### **3. Real-time Feedback**
+- **QueryBuilder**: Live JSON generation as users build queries
+- **AutoQuery**: Real-time URL parameter visualization
+- **DirectQuery**: Immediate syntax validation and error highlighting
+
+---
+
+## API Documentation
+
+### Current API Endpoints ✅ **IMPLEMENTED**
+
+#### **1. Execute Elasticsearch Query**
+```http
+POST /api/direct-query
+Content-Type: application/json
+
+{
+  "index": "health-data-index-v1",
+  "query": {
+    "query": { "match_all": {} },
+    "size": 10,
+    "from": 0
+  },
+  "from": 0,
+  "size": 10,
+  "_source": ["field1", "field2"] // Optional: field filtering
+}
+
+Response:
+{
+  "success": true,
+  "data": {
+    "took": 15,
+    "timed_out": false,
+    "_shards": { "total": 1, "successful": 1, "skipped": 0, "failed": 0 },
+    "hits": {
+      "total": { "value": 1000, "relation": "eq" },
+      "hits": [...] // Elasticsearch hit objects
+    },
+    "aggregations": { ... } // Optional aggregations
+  }
+}
+```
+
+#### **2. Get Available Indexes**
+```http
+GET /api/direct-query/indexes
+
+Response:
+{
+  "success": true,
+  "data": [
+    "health-data-index-v1",
+    "project-index-v1", 
+    "household-index-v1"
+  ]
+}
+```
+
+#### **3. Get Index Field Mapping** 🆕
+```http
+GET /api/direct-query/indexes/{indexName}/mapping
+
+Response:
+{
+  "success": true,
+  "data": {
+    "mappings": {
+      "properties": {
+        "Data": {
+          "properties": {
+            "boundaryHierarchy": {
+              "properties": {
+                "country": { "type": "text", "fields": { "keyword": { "type": "keyword" } } },
+                "state": { "type": "text", "fields": { "keyword": { "type": "keyword" } } }
+              }
             }
-          }}
-        >
-          {currentStep === onboardingSteps.length - 1 ? 'Get Started' : 'Next'}
-        </Button>
-      </DialogActions>
-    </Dialog>
-  );
-};
+          }
+        },
+        "id": { "type": "keyword" },
+        "timestamp": { "type": "date" }
+      }
+    }
+  }
+}
 ```
 
-### 5.4 Phase 5 Features
-- **Interactive Tutorials**: Step-by-step guided tours
-- **Help Center**: Searchable knowledge base
-- **User Onboarding**: Welcome flow for new users
-- **Contextual Help**: In-app help tooltips and hints
-- **Video Tutorials**: Embedded video guides
-- **FAQ System**: Frequently asked questions
-- **Feedback System**: User feedback collection
-- **Keyboard Shortcuts**: Hotkey documentation
-- **Release Notes**: What's new notifications
+### URL Patterns for Auto Query ✅ **IMPLEMENTED**
+
+#### **Basic Filtered Query**
+```
+/auto-query?index=health-data&status=active&autoExecute=true
+```
+
+#### **Nested Field Query**
+```
+/auto-query?index=project-data&Data.boundaryHierarchy.country=Mozambique&autoExecute=true
+```
+
+#### **Complex Query with Pagination**
+```
+/auto-query?index=household-data&status=active&from=0&size=50&date_from=2024-01-01&date_to=2024-12-31&autoExecute=true
+```
+
+#### **Custom Query Parameter**
+```
+/auto-query?index=my-index&query=%7B%22query%22%3A%7B%22match_all%22%3A%7B%7D%7D%7D&autoExecute=true
+```
 
 ---
 
-## Implementation Strategy
+## Summary
 
-### Development Timeline
-```
-Phase 1: Query & Data Tables    (Weeks 1-6)
-├── Week 1-2: Query Builder & JQL Editor
-├── Week 3-4: Data Table & Results Display
-├── Week 5-6: Query History & Basic Export
+### ✅ **Successfully Delivered (Phase 1)**
+1. **Three Complete Query Interfaces**: DirectQuery, AutoQuery, and QueryBuilder
+2. **Shared Architecture**: Reusable hooks and components eliminating code duplication
+3. **Advanced Features**: Column management, Excel export, URL sharing, field discovery
+4. **Performance Optimizations**: Source filtering, pagination, session management
+5. **Comprehensive Error Handling**: Structured API errors with user-friendly messages
+6. **TypeScript Integration**: Full type safety across the entire application
 
-Phase 2: Filter Management      (Weeks 7-10)
-├── Week 7-8: Filter CRUD Operations
-├── Week 9-10: Filter Library & Sharing
+### 🎯 **Business Value Delivered**
+- **Technical Users**: Full JSON query control via DirectQuery
+- **Business Users**: No-code query building via QueryBuilder  
+- **Dashboard Integration**: URL-driven queries via AutoQuery
+- **Data Analysis**: Advanced column filtering and Excel export
+- **Team Collaboration**: Shareable query URLs and consistent interfaces
 
-Phase 3: Dashboard System       (Weeks 11-18)
-├── Week 11-12: Dashboard Builder Framework
-├── Week 13-14: Chart Components (ECharts)
-├── Week 15-16: Gadget System & Layout
-├── Week 17-18: Dashboard Management
+### 🚀 **Technical Excellence Achieved**
+- **Code Quality**: Shared architecture with ~400+ lines of duplicate code eliminated
+- **Performance**: Optimized queries with field filtering and smart caching
+- **User Experience**: Progressive complexity from visual to code-based interfaces
+- **Maintainability**: Centralized logic in reusable hooks and components
+- **Scalability**: API-driven field discovery supporting any Elasticsearch index structure
 
-Phase 4: Export Functionality   (Weeks 19-22)
-├── Week 19-20: Export Manager & Process Tracking
-├── Week 21-22: Multiple Format Support
-
-Phase 5: Documentation & UX     (Weeks 23-25)
-├── Week 23: Help System & Tutorials
-├── Week 24: User Onboarding
-├── Week 25: Polish & Testing
-```
-
-### Team Structure
-- **2 Frontend Developers**: Core feature development
-- **1 UI/UX Designer**: Design system and user experience
-- **1 QA Engineer**: Testing and quality assurance
-- **1 Technical Writer**: Documentation and help content
-
-### Testing Strategy
-- **Unit Tests**: 80%+ code coverage using Jest
-- **Integration Tests**: API integration testing
-- **E2E Tests**: Critical user journeys with Cypress
-- **Performance Tests**: Bundle size and runtime performance
-- **Accessibility Tests**: WCAG 2.1 AA compliance
-
-### Deployment Strategy
-- **Staging Environment**: Feature testing and QA
-- **Production Deployment**: Blue-green deployment
-- **Feature Flags**: Gradual rollout of new features
-- **CDN Distribution**: Global content delivery
-- **Progressive Web App**: Offline capabilities
-
-This phased approach ensures steady progress while delivering value at each milestone, allowing for user feedback and iterative improvements throughout the development process.
+**Phase 1 represents a complete, production-ready Elasticsearch query interface system with three distinct user experience paths, built on a shared, maintainable architecture foundation.**

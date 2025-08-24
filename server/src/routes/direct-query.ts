@@ -27,4 +27,15 @@ router.get(
   })
 );
 
+/**
+ * GET /api/direct-query/indexes/:indexName/mapping
+ * Get field mapping for a specific index
+ */
+router.get(
+  '/indexes/:indexName/mapping',
+  asyncHandler(async (req: Request, res: Response) => {
+    await directQueryController.getIndexMapping(req, res);
+  })
+);
+
 export default router;

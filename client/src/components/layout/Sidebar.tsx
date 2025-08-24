@@ -20,6 +20,7 @@ import {
   Help as HelpIcon,
   Code as CodeIcon,
   Link as LinkIcon,
+  Build as BuildIcon,
 } from '@mui/icons-material';
 
 interface SidebarProps {
@@ -51,6 +52,14 @@ const navItems: NavItem[] = [
     label: 'Auto Query',
     icon: <LinkIcon />,
     path: '/auto-query',
+    available: true,
+    phase: 1,
+  },
+  {
+    id: 'query-builder',
+    label: 'Query Builder',
+    icon: <BuildIcon />,
+    path: '/query-builder',
     available: true,
     phase: 1,
   },
