@@ -215,6 +215,7 @@ export interface DirectQueryRequest {
   query: any; // Elasticsearch query object
   from?: number;
   size?: number;
+  _source?: string[] | boolean; // Fields to include in response
 }
 
 export interface DirectQueryResponse {

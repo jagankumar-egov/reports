@@ -25,6 +25,13 @@ import {
   TableRow,
   TablePagination,
   Chip,
+  Checkbox,
+  Popover,
+  List,
+  ListItem,
+  ListItemButton,
+  ListItemIcon,
+  ListItemText,
 } from '@mui/material';
 import {
   PlayArrow as ExecuteIcon,
@@ -32,12 +39,20 @@ import {
   Storage as IndexIcon,
   Code as CodeIcon,
   TableView as TableIcon,
-  Info as InfoIcon,
+  Download as DownloadIcon,
+  ViewColumn as ColumnIcon,
 } from '@mui/icons-material';
 
 import { DirectQueryRequest, DirectQueryResponse, ElasticsearchHit } from '@/types';
 import { directQueryAPI } from '@/services/api';
 import { useTheme } from '@mui/material/styles';
+import {
+  exportToExcel,
+  getSelectedColumnsForIndex,
+  saveColumnPreferences,
+  clearColumnPreferencesForIndex,
+  ExportData,
+} from '@/utils/excelExport';
 
 const DirectQuery: React.FC = () => {
   const theme = useTheme();
@@ -56,6 +71,14 @@ const DirectQuery: React.FC = () => {
   // Table pagination state
   const [page, setPage] = useState(0);
   const [rowsPerPage, setRowsPerPage] = useState(10);
+  
+  // Column selection state
+  const [selectedColumns, setSelectedColumns] = useState<string[]>([]);
+  const [availableColumns, setAvailableColumns] = useState<string[]>([]);
+  const [schemaColumns, setSchemaColumns] = useState<string[]>([]); // Full schema, not affected by filtering
+  const [lastQueryWasFiltered, setLastQueryWasFiltered] = useState<boolean>(false);
+  const [columnFilterOpen, setColumnFilterOpen] = useState(false);
+  const [columnAnchorEl, setColumnAnchorEl] = useState<HTMLButtonElement | null>(null);
 
   // Load available indexes on mount
   useEffect(() => {
@@ -76,6 +99,63 @@ const DirectQuery: React.FC = () => {
 
     loadIndexes();
   }, [selectedIndex]);
+
+  // Reset column selection when index changes
+  useEffect(() => {
+    if (selectedIndex) {
+      // Clear current selections to force refresh
+      setAvailableColumns([]);
+      setSelectedColumns([]);
+      setSchemaColumns([]);
+      setLastQueryWasFiltered(false);
+      // Clear any results from previous index
+      setResult(null);
+      setError(null);
+    }
+  }, [selectedIndex]);
+
+  // Update schema columns when we get unfiltered results
+  useEffect(() => {
+    if (result?.hits?.hits && !lastQueryWasFiltered && schemaColumns.length === 0) {
+      // Extract all columns from the unfiltered result
+      const allKeys = new Set<string>();
+      result.hits.hits.forEach(hit => {
+        if (hit._source) {
+          const extractKeys = (obj: any, prefix = '') => {
+            Object.keys(obj).forEach(key => {
+              const fullKey = prefix ? `${prefix}.${key}` : key;
+              if (obj[key] && typeof obj[key] === 'object' && !Array.isArray(obj[key])) {
+                extractKeys(obj[key], fullKey);
+              } else {
+                allKeys.add(fullKey);
+              }
+            });
+          };
+          extractKeys(hit._source);
+        }
+      });
+
+      const allColumns = ['_id', '_score', ...Array.from(allKeys).sort()];
+      setSchemaColumns(allColumns);
+      setAvailableColumns(allColumns);
+      
+      // Load saved column preferences for this index
+      const savedColumns = getSelectedColumnsForIndex(selectedIndex);
+      if (savedColumns && savedColumns.length > 0) {
+        // Filter saved columns to only include ones that exist in the schema
+        const validSavedColumns = savedColumns.filter(col => allColumns.includes(col));
+        if (validSavedColumns.length > 0) {
+          setSelectedColumns(validSavedColumns);
+        } else {
+          // If no valid saved columns, default to all
+          setSelectedColumns(allColumns);
+        }
+      } else {
+        // No saved preferences: default to all columns
+        setSelectedColumns(allColumns);
+      }
+    }
+  }, [result, lastQueryWasFiltered, schemaColumns.length, selectedIndex]);
 
   // Execute query
   const handleExecute = useCallback(async () => {
@@ -101,15 +181,48 @@ const DirectQuery: React.FC = () => {
         throw new Error(`Invalid JSON query: ${parseError instanceof Error ? parseError.message : String(parseError)}`);
       }
 
+      // Prepare _source filtering for optimization
+      // Only apply filtering if user has made explicit column selections
+      let sourceFilter: string[] | boolean = true; // Default: return all fields
+      
+      if (selectedColumns.length > 0) {
+        // User has selected columns - filter to only non-metadata fields
+        const sourceFields = selectedColumns.filter(col => !col.startsWith('_'));
+        if (sourceFields.length > 0) {
+          sourceFilter = sourceFields;
+        }
+      } else {
+        // No columns selected yet - check if there are saved preferences
+        const savedColumns = getSelectedColumnsForIndex(selectedIndex);
+        if (savedColumns && savedColumns.length > 0) {
+          const sourceFields = savedColumns.filter(col => !col.startsWith('_'));
+          if (sourceFields.length > 0 && savedColumns.length < 10) { // Only filter if user has limited selection
+            sourceFilter = sourceFields;
+          }
+        }
+      }
+      
       const request: DirectQueryRequest = {
         index: selectedIndex,
         query: parsedQuery,
         from,
         size,
+        _source: sourceFilter,
       };
+
+      // Track whether this query uses filtering
+      const queryUsesFiltering = Array.isArray(sourceFilter);
+      
+      // Debug logging (can be enabled for troubleshooting)
+      // console.log('DirectQuery: Executing with _source filter:', {
+      //   selectedColumns: selectedColumns.length > 0 ? selectedColumns : 'none',
+      //   sourceFilter: sourceFilter,
+      //   filterType: Array.isArray(sourceFilter) ? 'array' : 'boolean'
+      // });
 
       const response = await directQueryAPI.execute(request);
       setResult(response);
+      setLastQueryWasFiltered(queryUsesFiltering);
       setPage(0); // Reset to first page when new results come in
       
     } catch (err) {
@@ -134,7 +247,7 @@ const DirectQuery: React.FC = () => {
   }, []);
 
   // Handle pagination
-  const handleChangePage = useCallback((event: unknown, newPage: number) => {
+  const handleChangePage = useCallback((_event: unknown, newPage: number) => {
     setPage(newPage);
   }, []);
 
@@ -165,8 +278,13 @@ const DirectQuery: React.FC = () => {
       }
     });
 
-    // Create columns
-    const columns = ['_id', '_score', ...Array.from(allKeys).sort()];
+    // Create columns from current result
+    const resultColumns = ['_id', '_score', ...Array.from(allKeys).sort()];
+    
+    // Use selected columns for display, but only show columns that exist in the current result
+    const displayColumns = selectedColumns.length > 0 
+      ? selectedColumns.filter(col => resultColumns.includes(col))
+      : resultColumns;
     
     // Create rows
     const rows = hits.map((hit, index) => {
@@ -195,8 +313,8 @@ const DirectQuery: React.FC = () => {
       return row;
     });
 
-    return { columns, rows };
-  }, []);
+    return { columns: displayColumns, rows };
+  }, [selectedIndex, selectedColumns, availableColumns]);
 
   // Get paginated data
   const getPaginatedHits = useCallback(() => {
@@ -206,8 +324,81 @@ const DirectQuery: React.FC = () => {
     return result.hits.hits.slice(start, end);
   }, [result, page, rowsPerPage]);
 
+  // Helper function to compare arrays
+  const arraysEqual = (a: string[], b: string[]) => {
+    return a.length === b.length && a.every((val, index) => val === b[index]);
+  };
+
   const { columns, rows } = formatResultsForTable(getPaginatedHits());
   const totalHits = result?.hits?.total?.value || 0;
+  
+  // Handle column selection change
+  const handleColumnToggle = useCallback((column: string) => {
+    setSelectedColumns(prev => {
+      const newSelection = prev.includes(column)
+        ? prev.filter(col => col !== column)
+        : [...prev, column];
+      
+      // Save preferences to session storage
+      if (selectedIndex) {
+        saveColumnPreferences(selectedIndex, newSelection);
+        // Debug: Column selection updated
+        // console.log('DirectQuery: Column selection updated:', {
+        //   column,
+        //   newSelection,
+        //   index: selectedIndex
+        // });
+      }
+      
+      return newSelection;
+    });
+  }, [selectedIndex]);
+  
+  // Handle select all/none for columns
+  const handleSelectAllColumns = useCallback(() => {
+    const columnsToSelect = schemaColumns.length > 0 ? schemaColumns : availableColumns;
+    setSelectedColumns(columnsToSelect);
+    if (selectedIndex) {
+      saveColumnPreferences(selectedIndex, columnsToSelect);
+    }
+  }, [schemaColumns, availableColumns, selectedIndex]);
+  
+  const handleSelectNoColumns = useCallback(() => {
+    // Keep at least _id column for table structure
+    const minColumns = ['_id'];
+    setSelectedColumns(minColumns);
+    if (selectedIndex) {
+      saveColumnPreferences(selectedIndex, minColumns);
+    }
+  }, [selectedIndex]);
+  
+  // Handle Excel export
+  const handleExcelExport = useCallback(() => {
+    if (!result?.hits?.hits || rows.length === 0) {
+      return;
+    }
+    
+    // Get all data, not just paginated
+    const allResultsFormatted = formatResultsForTable(result.hits.hits);
+    const exportData: ExportData = {
+      columns: allResultsFormatted.columns,
+      rows: allResultsFormatted.rows,
+    };
+    
+    const filename = `${selectedIndex}_query_results_${new Date().toISOString().split('T')[0]}`;
+    exportToExcel(exportData, filename);
+  }, [result, rows, formatResultsForTable, selectedIndex]);
+  
+  // Column filter popover handlers
+  const handleColumnFilterClick = useCallback((event: React.MouseEvent<HTMLButtonElement>) => {
+    setColumnAnchorEl(event.currentTarget);
+    setColumnFilterOpen(true);
+  }, []);
+  
+  const handleColumnFilterClose = useCallback(() => {
+    setColumnFilterOpen(false);
+    setColumnAnchorEl(null);
+  }, []);
 
   return (
     <Box sx={{ p: 2 }}>
@@ -319,6 +510,28 @@ const DirectQuery: React.FC = () => {
                     >
                       Clear Results
                     </Button>
+                    
+                    {result && rows.length > 0 && (
+                      <>
+                        <Button
+                          variant="outlined"
+                          startIcon={<DownloadIcon />}
+                          onClick={handleExcelExport}
+                          disabled={loading}
+                        >
+                          Export Excel
+                        </Button>
+                        
+                        <Button
+                          variant="outlined"
+                          startIcon={<ColumnIcon />}
+                          onClick={handleColumnFilterClick}
+                          disabled={loading}
+                        >
+                          Columns ({selectedColumns.length}/{schemaColumns.length > 0 ? schemaColumns.length : availableColumns.length})
+                        </Button>
+                      </>
+                    )}
                   </Box>
                 </Grid>
               </Grid>
@@ -363,6 +576,89 @@ const DirectQuery: React.FC = () => {
                 </Box>
 
                 <Divider sx={{ mb: 2 }} />
+                
+                {/* Column Filter Popover */}
+                <Popover
+                  open={columnFilterOpen}
+                  anchorEl={columnAnchorEl}
+                  onClose={handleColumnFilterClose}
+                  anchorOrigin={{
+                    vertical: 'bottom',
+                    horizontal: 'left',
+                  }}
+                  transformOrigin={{
+                    vertical: 'top',
+                    horizontal: 'left',
+                  }}
+                >
+                  <Box sx={{ p: 2, minWidth: 300, maxWidth: 400 }}>
+                    <Typography variant="subtitle2" gutterBottom>
+                      Select Columns to Display
+                    </Typography>
+                    
+                    <Box sx={{ mb: 2, display: 'flex', gap: 1, flexWrap: 'wrap' }}>
+                      <Button
+                        size="small"
+                        variant="outlined"
+                        onClick={handleSelectAllColumns}
+                      >
+                        Select All
+                      </Button>
+                      <Button
+                        size="small"
+                        variant="outlined"
+                        onClick={handleSelectNoColumns}
+                      >
+                        Clear All
+                      </Button>
+                      <Button
+                        size="small"
+                        variant="outlined"
+                        color="warning"
+                        onClick={() => {
+                          if (selectedIndex) {
+                            clearColumnPreferencesForIndex(selectedIndex);
+                            const columnsToReset = schemaColumns.length > 0 ? schemaColumns : availableColumns;
+                            setSelectedColumns(columnsToReset);
+                          }
+                        }}
+                      >
+                        Reset
+                      </Button>
+                    </Box>
+                    
+                    <List dense sx={{ maxHeight: 300, overflow: 'auto' }}>
+                      {(schemaColumns.length > 0 ? schemaColumns : availableColumns).map((column) => (
+                        <ListItem key={column} disablePadding>
+                          <ListItemButton
+                            onClick={() => handleColumnToggle(column)}
+                            dense
+                          >
+                            <ListItemIcon sx={{ minWidth: 36 }}>
+                              <Checkbox
+                                checked={selectedColumns.includes(column)}
+                                tabIndex={-1}
+                                disableRipple
+                                size="small"
+                              />
+                            </ListItemIcon>
+                            <ListItemText 
+                              primary={column}
+                              primaryTypographyProps={{ 
+                                fontSize: '0.875rem',
+                                fontFamily: column.startsWith('_') ? 'monospace' : 'inherit'
+                              }}
+                            />
+                          </ListItemButton>
+                        </ListItem>
+                      ))}
+                    </List>
+                    
+                    <Typography variant="caption" color="text.secondary" sx={{ mt: 1, display: 'block' }}>
+                      Selected columns will be saved for this index
+                    </Typography>
+                  </Box>
+                </Popover>
 
                 {/* Results Table */}
                 {rows.length > 0 ? (

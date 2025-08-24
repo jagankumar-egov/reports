@@ -333,6 +333,7 @@ class ElasticsearchService {
     query: any;
     from?: number;
     size?: number;
+    _source?: string[] | boolean;
   }): Promise<ElasticsearchResponse> {
     const operationStartTime = Date.now();
     const operationId = Math.random().toString(36).substr(2, 9);
@@ -342,6 +343,7 @@ class ElasticsearchService {
       index: params.index,
       from: params.from || 0,
       size: params.size || 10,
+      _source: params._source ? (params._source === true ? 'all' : params._source.length) : 'all',
     });
 
     if (!this.client) {
@@ -362,15 +364,24 @@ class ElasticsearchService {
         query: JSON.stringify(params.query),
         from: params.from || 0,
         size: params.size || 10,
+        _source: params._source ? (params._source === true ? 'all' : params._source.length) : 'all',
       });
+      
+      // Build search body with optional _source filtering
+      const searchBody: any = {
+        ...params.query,
+        from: params.from || 0,
+        size: params.size || 10,
+      };
+      
+      // Add _source filtering if specified
+      if (params._source !== undefined) {
+        searchBody._source = params._source;
+      }
       
       const response = await this.client.search({
         index: params.index,
-        body: {
-          ...params.query,
-          from: params.from || 0,
-          size: params.size || 10,
-        },
+        body: searchBody,
       });
 
       const searchTime = Date.now() - searchStartTime;
