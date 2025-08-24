@@ -26,6 +26,7 @@ import {
 
 import { useElasticsearchQuery } from '@/hooks/useElasticsearchQuery';
 import { useElasticsearchPagination } from '@/hooks/useElasticsearchPagination';
+import { useExcelExport } from '@/hooks/useExcelExport';
 import { directQueryAPI } from '@/services/api';
 import { extractFieldsFromMapping, FieldInfo } from '@/utils/mappingUtils';
 import { QueryCondition } from '@/components/common/QueryBuilder';
@@ -39,6 +40,11 @@ const QueryBuilderPage: React.FC = () => {
   });
 
   const pagination = useElasticsearchPagination(10);
+  
+  // Excel export functionality
+  const excelExport = useExcelExport({
+    selectedIndex: query.selectedIndex,
+  });
 
   // Query Builder specific state
   const [fields, setFields] = useState<FieldInfo[]>([]);
@@ -220,16 +226,14 @@ const QueryBuilderPage: React.FC = () => {
                 <Grid item xs={12} sm={3}>
                   <ExportActions
                     onExcelExport={() => {
-                      // TODO: Implement Excel export for QueryBuilder
-                      console.log('Excel export for QueryBuilder');
+                      if (query.result) {
+                        excelExport.exportToExcel(query.result, 'visual_query_results');
+                      }
                     }}
-                    onColumnFilterClick={() => {
-                      // TODO: Implement column filter for QueryBuilder
-                      console.log('Column filter for QueryBuilder');
-                    }}
+                    onColumnFilterClick={() => {}}
                     selectedColumnsCount={0}
                     totalColumnsCount={0}
-                    disabled={!query.result || query.loading}
+                    disabled={excelExport.isExportDisabled(query.result)}
                     showExcelExport={true}
                     showColumnFilter={false}
                     excelLabel="Export Results"

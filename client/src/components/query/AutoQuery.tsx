@@ -33,6 +33,7 @@ import {
 
 import { useElasticsearchQuery } from '@/hooks/useElasticsearchQuery';
 import { useElasticsearchPagination } from '@/hooks/useElasticsearchPagination';
+import { useExcelExport } from '@/hooks/useExcelExport';
 
 interface DefaultFilter {
   field: string;
@@ -69,6 +70,11 @@ const AutoQuery: React.FC = () => {
   });
 
   const pagination = useElasticsearchPagination(10);
+  
+  // Excel export functionality
+  const excelExport = useExcelExport({
+    selectedIndex: query.selectedIndex,
+  });
 
   // Parse default filters from URL query parameters
   const defaultFilters = useMemo(() => {
@@ -464,8 +470,14 @@ const AutoQuery: React.FC = () => {
           >
             {query.result && (
               <ExportActions
-                data={query.result}
-                filename={`auto-query-${query.selectedIndex}`}
+                onExcelExport={() => excelExport.exportToExcel(query.result!, 'auto_query_results')}
+                onColumnFilterClick={() => {}}
+                selectedColumnsCount={0}
+                totalColumnsCount={0}
+                disabled={excelExport.isExportDisabled(query.result)}
+                showExcelExport={true}
+                showColumnFilter={false}
+                excelLabel="Export Results"
               />
             )}
           </QueryExecutionCard>

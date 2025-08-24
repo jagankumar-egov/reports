@@ -19,7 +19,6 @@ import {
   GetApp as ExportIcon,
   Help as HelpIcon,
   Code as CodeIcon,
-  Link as LinkIcon,
   Build as BuildIcon,
 } from '@mui/icons-material';
 
@@ -44,14 +43,6 @@ const navItems: NavItem[] = [
     label: 'Direct ES Query',
     icon: <CodeIcon />,
     path: '/direct-query',
-    available: true,
-    phase: 1,
-  },
-  {
-    id: 'auto-query',
-    label: 'Auto Query',
-    icon: <LinkIcon />,
-    path: '/auto-query',
     available: true,
     phase: 1,
   },

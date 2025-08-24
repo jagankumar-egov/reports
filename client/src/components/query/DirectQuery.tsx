@@ -17,13 +17,12 @@ import {
 
 import { useElasticsearchQuery } from '@/hooks/useElasticsearchQuery';
 import { useElasticsearchPagination } from '@/hooks/useElasticsearchPagination';
+import { useExcelExport } from '@/hooks/useExcelExport';
 
 import {
-  exportToExcel,
   getSelectedColumnsForIndex,
   saveColumnPreferences,
   clearColumnPreferencesForIndex,
-  ExportData,
 } from '@/utils/excelExport';
 
 const DirectQuery: React.FC = () => {
@@ -43,6 +42,12 @@ const DirectQuery: React.FC = () => {
   
   // Column selection state (DirectQuery specific)
   const [selectedColumns, setSelectedColumns] = useState<string[]>([]);
+  
+  // Excel export functionality (after selectedColumns is declared)
+  const excelExport = useExcelExport({
+    selectedIndex: query.selectedIndex,
+    selectedColumns: selectedColumns,
+  });
   const [availableColumns, setAvailableColumns] = useState<string[]>([]);
   const [schemaColumns, setSchemaColumns] = useState<string[]>([]); // Full schema, not affected by filtering
   const [lastQueryWasFiltered, setLastQueryWasFiltered] = useState<boolean>(false);
@@ -251,20 +256,10 @@ const DirectQuery: React.FC = () => {
   
   // Handle Excel export
   const handleExcelExport = useCallback(() => {
-    if (!query.result?.hits?.hits || rows.length === 0) {
-      return;
+    if (query.result) {
+      excelExport.exportToExcel(query.result, 'direct_query_results');
     }
-    
-    // Get all data, not just paginated
-    const allResultsFormatted = formatResultsForTable(query.result.hits.hits);
-    const exportData: ExportData = {
-      columns: allResultsFormatted.columns,
-      rows: allResultsFormatted.rows,
-    };
-    
-    const filename = `${query.selectedIndex}_query_results_${new Date().toISOString().split('T')[0]}`;
-    exportToExcel(exportData, filename);
-  }, [query.result, rows, formatResultsForTable, query.selectedIndex]);
+  }, [query.result, excelExport]);
   
   // Column filter popover handlers
   const handleColumnFilterClick = useCallback((event: React.MouseEvent<HTMLButtonElement>) => {
