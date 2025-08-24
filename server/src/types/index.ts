@@ -107,3 +107,53 @@ export interface UpdateSavedQueryRequest {
   queryData?: SavedQuery['queryData'];
   tags?: string[];
 }
+
+// Multi-Index Join Types
+export interface JoinConfiguration {
+  leftIndex: string;
+  rightIndex: string;
+  joinField: {
+    left: string;    // Field name in left index
+    right: string;   // Field name in right index
+  };
+  joinType: 'inner' | 'left' | 'right' | 'full';
+  fieldsToReturn?: {
+    left: string[];  // Fields to return from left index (with optional prefix)
+    right: string[]; // Fields to return from right index (with optional prefix)
+  };
+  leftQuery?: any;   // Optional query to filter left index
+  rightQuery?: any;  // Optional query to filter right index
+  limit?: number;    // Optional limit for results
+}
+
+export interface MultiIndexJoinRequest {
+  joins: JoinConfiguration[];  // Support for multiple joins
+  consolidatedFields?: string[]; // Optional field selection for final result
+  from?: number;
+  size?: number;
+}
+
+export interface JoinedRecord {
+  joinKey: string;
+  leftRecord?: any;
+  rightRecord?: any;
+  consolidatedRecord: any;
+  joinType: string;
+}
+
+export interface MultiIndexJoinResponse {
+  took: number;
+  totalResults: number;
+  joinSummary: {
+    leftIndexTotal: number;
+    rightIndexTotal: number;
+    joinedRecords: number;
+    leftOnlyRecords: number;
+    rightOnlyRecords: number;
+  };
+  results: JoinedRecord[];
+  aggregations?: {
+    joinFieldDistribution?: any;
+    indexDistribution?: any;
+  };
+}

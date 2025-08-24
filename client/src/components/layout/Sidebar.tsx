@@ -20,6 +20,7 @@ import {
   Help as HelpIcon,
   Code as CodeIcon,
   Build as BuildIcon,
+  JoinInner as JoinInnerIcon,
 } from '@mui/icons-material';
 
 interface SidebarProps {
@@ -51,6 +52,14 @@ const navItems: NavItem[] = [
     label: 'Query Builder',
     icon: <BuildIcon />,
     path: '/query-builder',
+    available: true,
+    phase: 1,
+  },
+  {
+    id: 'multi-index-join',
+    label: 'Multi-Index Join',
+    icon: <JoinInnerIcon />,
+    path: '/multi-index-join',
     available: true,
     phase: 1,
   },
@@ -212,7 +221,6 @@ const Sidebar: React.FC<SidebarProps> = ({ open }) => {
           <ListItem disablePadding>
             <ListItemButton
               onClick={() => navigate('/direct-query')}
-              size="small"
               sx={{ borderRadius: 1, py: 0.5 }}
             >
               <ListItemIcon sx={{ minWidth: 32 }}>

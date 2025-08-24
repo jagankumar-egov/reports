@@ -93,4 +93,49 @@ export interface UpdateSavedQueryRequest {
     queryData?: SavedQuery['queryData'];
     tags?: string[];
 }
+export interface JoinConfiguration {
+    leftIndex: string;
+    rightIndex: string;
+    joinField: {
+        left: string;
+        right: string;
+    };
+    joinType: 'inner' | 'left' | 'right' | 'full';
+    fieldsToReturn?: {
+        left: string[];
+        right: string[];
+    };
+    leftQuery?: any;
+    rightQuery?: any;
+    limit?: number;
+}
+export interface MultiIndexJoinRequest {
+    joins: JoinConfiguration[];
+    consolidatedFields?: string[];
+    from?: number;
+    size?: number;
+}
+export interface JoinedRecord {
+    joinKey: string;
+    leftRecord?: any;
+    rightRecord?: any;
+    consolidatedRecord: any;
+    joinType: string;
+}
+export interface MultiIndexJoinResponse {
+    took: number;
+    totalResults: number;
+    joinSummary: {
+        leftIndexTotal: number;
+        rightIndexTotal: number;
+        joinedRecords: number;
+        leftOnlyRecords: number;
+        rightOnlyRecords: number;
+    };
+    results: JoinedRecord[];
+    aggregations?: {
+        joinFieldDistribution?: any;
+        indexDistribution?: any;
+    };
+}
 //# sourceMappingURL=index.d.ts.map

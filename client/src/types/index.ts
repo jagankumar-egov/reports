@@ -1,5 +1,18 @@
 // DHR Frontend Types - Phase 1: Direct Elasticsearch Query
 
+// Field Information Types
+export interface FieldInfo {
+  name: string;
+  type: string;
+  fullPath: string;
+  isAnalyzed: boolean;
+  isKeyword: boolean;
+  isNumeric: boolean;
+  isDate: boolean;
+  isBoolean: boolean;
+  hasKeywordVariant: boolean;
+}
+
 // API Response Types
 export interface ApiResponse<T = any> {
   success: boolean;
@@ -141,4 +154,67 @@ export interface SavedQueriesListResponse {
     offset: number;
     hasMore: boolean;
   };
+}
+
+// Multi-Index Join Types
+export interface JoinConfiguration {
+  leftIndex: string;
+  rightIndex: string;
+  joinField: {
+    left: string;    // Field name in left index
+    right: string;   // Field name in right index
+  };
+  joinType: 'inner' | 'left' | 'right' | 'full';
+  fieldsToReturn?: {
+    left: string[];  // Fields to return from left index
+    right: string[]; // Fields to return from right index
+  };
+  leftQuery?: any;   // Optional query to filter left index
+  rightQuery?: any;  // Optional query to filter right index
+  limit?: number;    // Optional limit for results
+}
+
+export interface MultiIndexJoinRequest {
+  joins: JoinConfiguration[];  // Support for multiple joins
+  consolidatedFields?: string[]; // Optional field selection for final result
+  from?: number;
+  size?: number;
+}
+
+export interface JoinedRecord {
+  joinKey: string;
+  leftRecord?: any;
+  rightRecord?: any;
+  consolidatedRecord: any;
+  joinType: string;
+}
+
+export interface MultiIndexJoinResponse {
+  took: number;
+  totalResults: number;
+  joinSummary: {
+    leftIndexTotal: number;
+    rightIndexTotal: number;
+    joinedRecords: number;
+    leftOnlyRecords: number;
+    rightOnlyRecords: number;
+  };
+  results: JoinedRecord[];
+  aggregations?: {
+    joinFieldDistribution?: any;
+    indexDistribution?: any;
+  };
+}
+
+export interface JoinPreviewResponse {
+  preview: JoinedRecord[];
+  joinSummary: {
+    leftIndexTotal: number;
+    rightIndexTotal: number;
+    joinedRecords: number;
+    leftOnlyRecords: number;
+    rightOnlyRecords: number;
+  };
+  possibleMatches: number;
+  sampleJoinKeys: Record<string, number>;
 }

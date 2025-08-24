@@ -14,6 +14,7 @@ import { elasticsearchService } from './services/elasticsearch';
 // Routes
 import directQueryRoutes from './routes/direct-query';
 import savedQueriesRoutes from './routes/saved-queries';
+import multiIndexJoinRoutes from './routes/multi-index-join';
 
 // Load environment variables
 dotenv.config();
@@ -64,6 +65,7 @@ app.get('/health', (req, res) => {
 // API Routes
 app.use('/api/direct-query', directQueryRoutes);
 app.use('/api/saved-queries', savedQueriesRoutes);
+app.use('/api/multi-index-join', multiIndexJoinRoutes);
 
 // Error handling
 app.use(errorHandler);

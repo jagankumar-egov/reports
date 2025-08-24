@@ -15,6 +15,7 @@ import ErrorBoundary from '@/components/common/ErrorBoundary';
 import DirectQueryPage from '@/pages/DirectQueryPage';
 import AutoQueryPage from '@/pages/AutoQueryPage';
 import QueryBuilderPage from '@/pages/QueryBuilderPage';
+import MultiIndexJoinPage from '@/pages/MultiIndexJoinPage';
 import LoadingSpinner from '@/components/common/LoadingSpinner';
 
 const App: React.FC = () => {
@@ -101,6 +102,9 @@ const App: React.FC = () => {
             
             {/* Visual Query Builder */}
             <Route path="/query-builder" element={<QueryBuilderPage />} />
+            
+            {/* Multi-Index Join */}
+            <Route path="/multi-index-join" element={<MultiIndexJoinPage />} />
             
             {/* Catch-all route */}
             <Route path="*" element={<Navigate to="/direct-query" replace />} />
