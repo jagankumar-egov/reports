@@ -25,6 +25,11 @@ import {
   Accordion,
   AccordionSummary,
   AccordionDetails,
+  ToggleButton,
+  ToggleButtonGroup,
+  TablePagination,
+  IconButton,
+  Tooltip,
 } from '@mui/material';
 import {
   JoinInner as JoinIcon,
@@ -33,6 +38,9 @@ import {
   Clear as ClearIcon,
   ExpandMore as ExpandMoreIcon,
   Info as InfoIcon,
+  TableView as TableViewIcon,
+  ViewList as ListViewIcon,
+  GetApp as DownloadIcon,
 } from '@mui/icons-material';
 
 import { useElasticsearchQuery } from '@/hooks/useElasticsearchQuery';
@@ -40,6 +48,7 @@ import { useMultiIndexJoin } from '@/hooks/useMultiIndexJoin';
 import { JoinConfiguration, FieldInfo } from '@/types';
 import { directQueryAPI } from '@/services/api';
 import { extractFieldsFromMapping } from '@/utils/mappingUtils';
+import { exportToExcel } from '@/utils/excelExport';
 
 const MultiIndexJoinPage: React.FC = () => {
   // Use shared hooks for index list
@@ -62,6 +71,14 @@ const MultiIndexJoinPage: React.FC = () => {
   const [leftFields, setLeftFields] = useState<FieldInfo[]>([]);
   const [rightFields, setRightFields] = useState<FieldInfo[]>([]);
   const [fieldsLoading, setFieldsLoading] = useState({ left: false, right: false });
+
+  // Table view state
+  const [viewMode, setViewMode] = useState<'preview' | 'table'>('preview');
+  const [page, setPage] = useState(0);
+  const [rowsPerPage, setRowsPerPage] = useState(10);
+  const [mergeColumns, setMergeColumns] = useState(true);
+  const [exportAll, setExportAll] = useState(false);
+  const [exporting, setExporting] = useState(false);
 
   // Handle join preview
   const handlePreview = useCallback(async () => {
@@ -178,6 +195,241 @@ const MultiIndexJoinPage: React.FC = () => {
     }
   };
 
+  // Index colors for differentiation
+  const getIndexColor = (indexName: string) => {
+    const colors = {
+      [leftIndex]: '#1976d2', // Blue for left index
+      [rightIndex]: '#d32f2f', // Red for right index
+    };
+    return colors[indexName] || '#666';
+  };
+
+  // Flatten nested object to get all field paths
+  const flattenObject = (obj: any, prefix = ''): Record<string, any> => {
+    const flattened: Record<string, any> = {};
+    
+    Object.keys(obj || {}).forEach(key => {
+      const value = obj[key];
+      const newKey = prefix ? `${prefix}.${key}` : key;
+      
+      if (value !== null && typeof value === 'object' && !Array.isArray(value) && !(value instanceof Date)) {
+        // Recursively flatten nested objects
+        Object.assign(flattened, flattenObject(value, newKey));
+      } else {
+        // Add the value to flattened object
+        flattened[newKey] = value;
+      }
+    });
+    
+    return flattened;
+  };
+
+  // Process joined data for table view
+  const processTableData = (results: any[]) => {
+    if (!results || results.length === 0) return { columns: [], rows: [] };
+
+    // Collect all unique field paths from both indices (flattened)
+    const allFieldPaths = new Set<string>();
+    const leftFieldPaths = new Set<string>();
+    const rightFieldPaths = new Set<string>();
+    const commonFields = new Set<string>();
+
+    // First pass: collect all field paths
+    results.forEach(record => {
+      if (record.leftRecord) {
+        const flattened = flattenObject(record.leftRecord);
+        Object.keys(flattened).forEach(field => {
+          leftFieldPaths.add(field);
+          allFieldPaths.add(field);
+        });
+      }
+      if (record.rightRecord) {
+        const flattened = flattenObject(record.rightRecord);
+        Object.keys(flattened).forEach(field => {
+          rightFieldPaths.add(field);
+          allFieldPaths.add(field);
+        });
+      }
+    });
+
+    // Identify common fields
+    leftFieldPaths.forEach(field => {
+      if (rightFieldPaths.has(field)) {
+        commonFields.add(field);
+      }
+    });
+
+    // Create columns based on merge preference
+    const columns: Array<{
+      id: string;
+      label: string;
+      field: string;
+      sourceIndex?: string;
+      color?: string;
+      merged?: boolean;
+    }> = [];
+
+    // Always add join key column first if exists
+    columns.push({
+      id: '_joinKey',
+      label: 'Join Key',
+      field: '_joinKey',
+      merged: true,
+    });
+
+    if (mergeColumns) {
+      // Merged columns for common fields
+      [...commonFields].sort().forEach(field => {
+        columns.push({
+          id: field,
+          label: field,
+          field,
+          merged: true,
+        });
+      });
+
+      // Separate columns for unique fields from left index
+      [...leftFieldPaths].filter(field => !commonFields.has(field)).sort().forEach(field => {
+        columns.push({
+          id: `${leftIndex}.${field}`,
+          label: field,
+          field,
+          sourceIndex: leftIndex,
+          color: getIndexColor(leftIndex),
+        });
+      });
+
+      // Separate columns for unique fields from right index
+      [...rightFieldPaths].filter(field => !commonFields.has(field)).sort().forEach(field => {
+        columns.push({
+          id: `${rightIndex}.${field}`,
+          label: field,
+          field,
+          sourceIndex: rightIndex,
+          color: getIndexColor(rightIndex),
+        });
+      });
+    } else {
+      // Separate columns for all fields with index prefixes
+      [...leftFieldPaths].sort().forEach(field => {
+        columns.push({
+          id: `${leftIndex}.${field}`,
+          label: `[${leftIndex}] ${field}`,
+          field,
+          sourceIndex: leftIndex,
+          color: getIndexColor(leftIndex),
+        });
+      });
+
+      [...rightFieldPaths].sort().forEach(field => {
+        columns.push({
+          id: `${rightIndex}.${field}`,
+          label: `[${rightIndex}] ${field}`,
+          field,
+          sourceIndex: rightIndex,
+          color: getIndexColor(rightIndex),
+        });
+      });
+    }
+
+    // Create rows with flattened data
+    const rows = results.map((record, index) => {
+      const row: any = { id: index, _joinKey: record.joinKey || 'N/A' };
+      
+      // Flatten both records
+      const leftFlattened = record.leftRecord ? flattenObject(record.leftRecord) : {};
+      const rightFlattened = record.rightRecord ? flattenObject(record.rightRecord) : {};
+
+      columns.forEach(column => {
+        if (column.field === '_joinKey') {
+          // Skip, already set
+        } else if (column.merged) {
+          // For merged columns, prefer left record value, fallback to right
+          const value = leftFlattened[column.field] ?? rightFlattened[column.field] ?? '';
+          row[column.id] = formatCellValue(value);
+        } else if (column.sourceIndex === leftIndex) {
+          const value = leftFlattened[column.field] ?? '';
+          row[column.id] = formatCellValue(value);
+        } else if (column.sourceIndex === rightIndex) {
+          const value = rightFlattened[column.field] ?? '';
+          row[column.id] = formatCellValue(value);
+        }
+      });
+
+      return row;
+    });
+
+    return { columns, rows };
+  };
+
+  // Format cell value for display
+  const formatCellValue = (value: any): string => {
+    if (value === null || value === undefined) return '';
+    if (typeof value === 'object') {
+      if (Array.isArray(value)) return value.join(', ');
+      if (value instanceof Date) return value.toISOString();
+      return JSON.stringify(value);
+    }
+    return String(value);
+  };
+
+  // Handle Excel export - exports exactly what's visible in the table
+  const handleExcelExport = async (forceExportAll = false) => {
+    if (!join.result?.results) {
+      console.warn('No join results available for export');
+      return;
+    }
+
+    setExporting(true);
+    
+    try {
+      const { columns, rows } = processTableData(join.result.results);
+      
+      if (!columns.length || !rows.length) {
+        console.warn('No data available for export');
+        return;
+      }
+      
+      // Export all data or just current page based on user preference
+      const shouldExportAll = forceExportAll || exportAll;
+      const dataToExport = shouldExportAll 
+        ? rows
+        : rows.slice(page * rowsPerPage, page * rowsPerPage + rowsPerPage);
+      
+      if (!dataToExport.length) {
+        console.warn('No data on current page to export');
+        return;
+      }
+      
+      // Convert to the format expected by exportToExcel utility
+      const columnLabels = columns.map(col => col.label);
+      const exportRows = dataToExport.map(row => {
+        const exportRow: any = {};
+        columns.forEach(col => {
+          exportRow[col.label] = row[col.id] || '';
+        });
+        return exportRow;
+      });
+
+      // Include metadata in filename
+      const viewType = mergeColumns ? 'merged' : 'separated';
+      const exportType = shouldExportAll ? '_all' : `_page${page + 1}`;
+      const filename = `join_${leftIndex}_${rightIndex}_${viewType}${exportType}_${new Date().toISOString().split('T')[0]}`;
+      
+      // Use the raw exportToExcel utility
+      exportToExcel({
+        columns: columnLabels,
+        rows: exportRows
+      }, filename);
+      
+      console.log(`✅ Exported ${exportRows.length} rows with ${columnLabels.length} columns to ${filename}.csv`);
+    } catch (error) {
+      console.error('Export failed:', error);
+    } finally {
+      setExporting(false);
+    }
+  };
+
   const renderJoinSummary = (summary: any) => (
     <Grid container spacing={2} sx={{ mb: 2 }}>
       <Grid item xs={6} sm={3}>
@@ -251,6 +503,169 @@ const MultiIndexJoinPage: React.FC = () => {
       </Table>
     </TableContainer>
   );
+
+  // Render structured table view
+  const renderTableView = (results: any[]) => {
+    const { columns, rows } = processTableData(results);
+    const paginatedRows = rows.slice(page * rowsPerPage, page * rowsPerPage + rowsPerPage);
+    
+    // Count columns by type for info display
+    const mergedColumnsCount = columns.filter(c => c.merged && c.field !== '_joinKey').length;
+    const leftColumnsCount = columns.filter(c => c.sourceIndex === leftIndex).length;
+    const rightColumnsCount = columns.filter(c => c.sourceIndex === rightIndex).length;
+
+    return (
+      <Box>
+        {/* Table controls */}
+        <Box sx={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', mb: 2 }}>
+          <Box sx={{ display: 'flex', alignItems: 'center', gap: 2 }}>
+            <ToggleButtonGroup
+              value={mergeColumns}
+              exclusive
+              onChange={(e, value) => value !== null && setMergeColumns(value)}
+              size="small"
+            >
+              <ToggleButton value={true}>
+                <Tooltip title="Merge common columns">
+                  <Box sx={{ display: 'flex', alignItems: 'center', gap: 1 }}>
+                    Merged View
+                  </Box>
+                </Tooltip>
+              </ToggleButton>
+              <ToggleButton value={false}>
+                <Tooltip title="Show separate columns for each index">
+                  <Box sx={{ display: 'flex', alignItems: 'center', gap: 1 }}>
+                    Separated View
+                  </Box>
+                </Tooltip>
+              </ToggleButton>
+            </ToggleButtonGroup>
+
+            {/* Index legend */}
+            <Box sx={{ display: 'flex', gap: 1, alignItems: 'center' }}>
+              <Chip
+                size="small"
+                label={leftIndex}
+                sx={{ 
+                  backgroundColor: getIndexColor(leftIndex), 
+                  color: 'white',
+                  fontSize: '0.75rem'
+                }}
+              />
+              <Chip
+                size="small"
+                label={rightIndex}
+                sx={{ 
+                  backgroundColor: getIndexColor(rightIndex), 
+                  color: 'white',
+                  fontSize: '0.75rem'
+                }}
+              />
+            </Box>
+          </Box>
+
+          <Box sx={{ display: 'flex', alignItems: 'center', gap: 1 }}>
+            <FormControl size="small">
+              <Select
+                value={exportAll ? 'all' : 'page'}
+                onChange={(e) => setExportAll(e.target.value === 'all')}
+                sx={{ minWidth: 120 }}
+              >
+                <MenuItem value="page">Current Page</MenuItem>
+                <MenuItem value="all">All Data</MenuItem>
+              </Select>
+            </FormControl>
+            <Tooltip title={`Export ${exportAll ? 'All Data' : 'Current Page'} to Excel`}>
+              <IconButton 
+                onClick={() => handleExcelExport()}
+                disabled={!rows.length || exporting}
+                color="primary"
+              >
+                {exporting ? <CircularProgress size={20} /> : <DownloadIcon />}
+              </IconButton>
+            </Tooltip>
+          </Box>
+        </Box>
+
+        {/* Column info */}
+        <Typography variant="caption" color="text.secondary" sx={{ mb: 1, display: 'block' }}>
+          Showing {columns.length} columns total{mergeColumns ? ` (${mergedColumnsCount} common, ${leftColumnsCount} from ${leftIndex}, ${rightColumnsCount} from ${rightIndex})` : ''}
+        </Typography>
+
+        {/* Table */}
+        <TableContainer component={Paper} sx={{ maxHeight: 600, overflow: 'auto' }}>
+          <Table size="small" stickyHeader>
+            <TableHead>
+              <TableRow>
+                {columns.map(column => (
+                  <TableCell 
+                    key={column.id}
+                    sx={{
+                      backgroundColor: column.color ? `${column.color}15` : 'background.paper',
+                      borderLeft: column.color ? `3px solid ${column.color}` : 'none',
+                      fontWeight: 'bold',
+                      whiteSpace: 'nowrap',
+                      minWidth: 120,
+                    }}
+                  >
+                    <Tooltip title={`${column.sourceIndex ? `From: ${column.sourceIndex}` : column.merged ? 'Common field' : 'Join Key'}`}>
+                      <Box sx={{ display: 'flex', alignItems: 'center', gap: 1 }}>
+                        {column.label}
+                        {column.merged && column.field !== '_joinKey' && (
+                          <Chip 
+                            size="small" 
+                            label="M" 
+                            variant="outlined"
+                            sx={{ fontSize: '0.6rem', height: 14, '& .MuiChip-label': { px: 0.5 } }}
+                          />
+                        )}
+                      </Box>
+                    </Tooltip>
+                  </TableCell>
+                ))}
+              </TableRow>
+            </TableHead>
+            <TableBody>
+              {paginatedRows.map(row => (
+                <TableRow key={row.id} hover>
+                  {columns.map(column => (
+                    <TableCell 
+                      key={column.id}
+                      sx={{
+                        borderLeft: column.color ? `3px solid ${column.color}` : 'none',
+                        maxWidth: 200,
+                        overflow: 'hidden',
+                        textOverflow: 'ellipsis',
+                        whiteSpace: 'nowrap',
+                      }}
+                    >
+                      <Tooltip title={String(row[column.id] || '')}>
+                        <span>{String(row[column.id] || '')}</span>
+                      </Tooltip>
+                    </TableCell>
+                  ))}
+                </TableRow>
+              ))}
+            </TableBody>
+          </Table>
+        </TableContainer>
+
+        {/* Pagination */}
+        <TablePagination
+          component="div"
+          count={rows.length}
+          page={page}
+          onPageChange={(event, newPage) => setPage(newPage)}
+          rowsPerPage={rowsPerPage}
+          onRowsPerPageChange={(event) => {
+            setRowsPerPage(parseInt(event.target.value, 10));
+            setPage(0);
+          }}
+          rowsPerPageOptions={[5, 10, 25, 50]}
+        />
+      </Box>
+    );
+  };
 
   return (
     <Box sx={{ p: 2 }}>
@@ -504,18 +919,49 @@ const MultiIndexJoinPage: React.FC = () => {
           <Grid item xs={12}>
             <Card>
               <CardContent>
-                <Typography variant="h6" sx={{ mb: 2 }}>
-                  Join Results ({join.result.totalResults} total, showing {join.result.results.length})
-                </Typography>
+                <Box sx={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', mb: 2 }}>
+                  <Typography variant="h6">
+                    Join Results ({join.result.totalResults} total, showing {join.result.results.length})
+                  </Typography>
+                  
+                  {/* View mode toggle */}
+                  <ToggleButtonGroup
+                    value={viewMode}
+                    exclusive
+                    onChange={(e, value) => value !== null && setViewMode(value)}
+                    size="small"
+                  >
+                    <ToggleButton value="preview">
+                      <ListViewIcon sx={{ mr: 1 }} />
+                      Preview
+                    </ToggleButton>
+                    <ToggleButton value="table">
+                      <TableViewIcon sx={{ mr: 1 }} />
+                      Table
+                    </ToggleButton>
+                  </ToggleButtonGroup>
+                </Box>
                 
                 {renderJoinSummary(join.result.joinSummary)}
                 
-                <Typography variant="subtitle1" sx={{ mb: 2 }}>
-                  Joined Data:
-                </Typography>
-                
                 {join.result.results.length > 0 ? (
-                  renderPreviewTable(join.result.results)
+                  <>
+                    {viewMode === 'preview' ? (
+                      <>
+                        <Typography variant="subtitle1" sx={{ mb: 2 }}>
+                          Joined Data (Preview):
+                        </Typography>
+                        {renderPreviewTable(join.result.results)}
+                      </>
+                    ) : (
+                      <>
+                        <Typography variant="subtitle1" sx={{ mb: 2 }}>
+                          Joined Data (Table):
+                        </Typography>
+                        {renderTableView(join.result.results)}
+                      </>
+                    )}
+                  </>
                 ) : (
                   <Alert severity="info">
                     No results found for the specified join criteria.
