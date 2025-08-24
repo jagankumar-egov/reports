@@ -101,6 +101,16 @@ All API responses follow a consistent structure:
 | `INDEX_NOT_FOUND` | 404 | Requested index does not exist |
 | `MAPPING_FETCH_ERROR` | 500 | Failed to retrieve index mapping |
 | `ELASTICSEARCH_ERROR` | 500 | Elasticsearch query execution failed |
+| `MISSING_NAME` | 400 | Query name is required for saved queries |
+| `INVALID_QUERY_TYPE` | 400 | Query type must be direct, visual, or auto |
+| `MISSING_TARGET_INDEX` | 400 | Target index is required for saved queries |
+| `MISSING_QUERY_DATA` | 400 | Query data is required for saved queries |
+| `QUERY_NOT_FOUND` | 404 | Saved query not found |
+| `QUERY_CREATE_ERROR` | 500 | Failed to create saved query |
+| `QUERY_UPDATE_ERROR` | 500 | Failed to update saved query |
+| `QUERY_DELETE_ERROR` | 500 | Failed to delete saved query |
+| `QUERY_LIST_ERROR` | 500 | Failed to list saved queries |
+| `QUERY_EXECUTE_ERROR` | 500 | Failed to execute saved query |
 
 ### Error Response Examples
 
@@ -131,7 +141,205 @@ All API responses follow a consistent structure:
 
 ## Endpoints
 
-### 1. Execute Direct Elasticsearch Query
+### 1. Saved Queries Management
+
+#### Create Saved Query
+**Endpoint**: `POST /saved-queries`
+
+Creates a new saved query that can be reused across different query interfaces.
+
+##### Request Body
+```json
+{
+  "name": "Sample Project Query",
+  "description": "Query to find all active projects in Mozambique",
+  "queryType": "direct",
+  "targetIndex": "project-index-v1",
+  "queryData": {
+    "rawQuery": {
+      "query": {
+        "bool": {
+          "must": [
+            { "term": { "status.keyword": "active" } },
+            { "term": { "Data.boundaryHierarchy.country.keyword": "Mozambique" } }
+          ]
+        }
+      },
+      "size": 20
+    },
+    "from": 0,
+    "size": 20,
+    "_source": ["id", "name", "status", "Data.boundaryHierarchy"]
+  },
+  "tags": ["projects", "mozambique", "active"]
+}
+```
+
+##### Response
+```json
+{
+  "success": true,
+  "data": {
+    "id": "sq_abc123def456",
+    "name": "Sample Project Query",
+    "description": "Query to find all active projects in Mozambique",
+    "queryType": "direct",
+    "targetIndex": "project-index-v1",
+    "queryData": {
+      "rawQuery": { /* ... */ },
+      "from": 0,
+      "size": 20,
+      "_source": ["id", "name", "status", "Data.boundaryHierarchy"]
+    },
+    "metadata": {
+      "createdAt": "2025-08-24T12:39:01.479Z",
+      "updatedAt": "2025-08-24T12:39:01.479Z",
+      "tags": ["projects", "mozambique", "active"],
+      "executionCount": 0
+    }
+  },
+  "meta": {
+    "operationId": "sq_create_xyz789",
+    "totalTime": "245ms",
+    "timestamp": "2025-08-24T12:39:01.724Z"
+  }
+}
+```
+
+#### Get All Saved Queries
+**Endpoint**: `GET /saved-queries`
+
+Retrieves saved queries with optional filtering and pagination.
+
+##### Query Parameters
+- `queryType` (optional): Filter by query type (`direct`, `visual`, `auto`)
+- `targetIndex` (optional): Filter by target index name
+- `tags` (optional): Comma-separated list of tags to filter by
+- `limit` (optional): Maximum number of results (default: 100, max: 1000)
+- `offset` (optional): Number of results to skip (default: 0)
+
+##### Response
+```json
+{
+  "success": true,
+  "data": {
+    "queries": [
+      {
+        "id": "sq_abc123def456",
+        "name": "Sample Project Query",
+        "description": "Query to find all active projects in Mozambique",
+        "queryType": "direct",
+        "targetIndex": "project-index-v1",
+        "queryData": { /* ... */ },
+        "metadata": {
+          "createdAt": "2025-08-24T12:39:01.479Z",
+          "updatedAt": "2025-08-24T12:39:01.479Z",
+          "tags": ["projects", "mozambique", "active"],
+          "executionCount": 5,
+          "lastExecutedAt": "2025-08-24T15:22:15.123Z"
+        }
+      }
+    ],
+    "pagination": {
+      "total": 1,
+      "limit": 100,
+      "offset": 0,
+      "hasMore": false
+    }
+  },
+  "meta": {
+    "operationId": "sq_list_abc456",
+    "totalTime": "76ms",
+    "timestamp": "2025-08-24T12:45:22.156Z"
+  }
+}
+```
+
+#### Get Specific Saved Query
+**Endpoint**: `GET /saved-queries/{queryId}`
+
+Retrieves a specific saved query by ID.
+
+##### Response
+```json
+{
+  "success": true,
+  "data": {
+    "id": "sq_abc123def456",
+    "name": "Sample Project Query",
+    /* ... full saved query object ... */
+  },
+  "meta": {
+    "operationId": "sq_get_def789",
+    "totalTime": "45ms",
+    "timestamp": "2025-08-24T12:46:08.892Z"
+  }
+}
+```
+
+#### Update Saved Query
+**Endpoint**: `PUT /saved-queries/{queryId}`
+
+Updates an existing saved query.
+
+##### Request Body
+```json
+{
+  "name": "Updated Project Query",
+  "description": "Updated description",
+  "queryData": {
+    "rawQuery": { /* updated query */ }
+  },
+  "tags": ["projects", "mozambique", "updated"]
+}
+```
+
+#### Delete Saved Query
+**Endpoint**: `DELETE /saved-queries/{queryId}`
+
+Deletes a saved query permanently.
+
+##### Response
+```json
+{
+  "success": true,
+  "data": {
+    "deleted": true,
+    "queryId": "sq_abc123def456"
+  },
+  "meta": {
+    "operationId": "sq_delete_ghi012",
+    "totalTime": "89ms",
+    "timestamp": "2025-08-24T12:47:33.445Z"
+  }
+}
+```
+
+#### Execute Saved Query
+**Endpoint**: `POST /saved-queries/{queryId}/execute`
+
+Retrieves saved query data for execution and increments the execution count.
+
+##### Response
+```json
+{
+  "success": true,
+  "data": {
+    "query": {
+      "id": "sq_abc123def456",
+      /* ... full saved query object with updated executionCount ... */
+    },
+    "message": "Query data retrieved successfully. Execute using the appropriate query interface."
+  },
+  "meta": {
+    "operationId": "sq_execute_jkl345",
+    "totalTime": "72ms",
+    "timestamp": "2025-08-24T12:48:15.778Z"
+  }
+}
+```
+
+### 2. Execute Direct Elasticsearch Query
 
 Execute raw Elasticsearch queries with full control over query DSL.
 
@@ -331,6 +539,78 @@ Retrieve field mapping information for visual query builder.
 
 ## Data Models
 
+### SavedQuery
+```typescript
+interface SavedQuery {
+  id: string;                    // Unique identifier
+  name: string;                  // Human-readable query name
+  description?: string;          // Optional description
+  queryType: 'direct' | 'visual' | 'auto'; // Query interface type
+  targetIndex: string;           // Target Elasticsearch index
+  queryData: {
+    // For direct queries
+    rawQuery?: any;              // Raw Elasticsearch query DSL
+    from?: number;               // Starting document offset
+    size?: number;               // Number of documents to return
+    _source?: string[] | boolean; // Field filtering
+    
+    // For visual queries
+    visualFields?: Array<{
+      field: string;             // Field name
+      operator: string;          // Query operator (term, match, range, etc.)
+      value: any;               // Query value
+      type: string;             // Field type (text, keyword, number, date)
+    }>;
+    
+    // For auto queries
+    urlParams?: Record<string, string>; // URL parameter mappings
+  };
+  metadata: {
+    createdAt: string;           // ISO timestamp of creation
+    updatedAt: string;           // ISO timestamp of last update
+    createdBy?: string;          // Optional creator identifier
+    tags?: string[];             // Optional tags for organization
+    executionCount?: number;     // Number of times executed
+    lastExecutedAt?: string;     // ISO timestamp of last execution
+  };
+}
+```
+
+### CreateSavedQueryRequest
+```typescript
+interface CreateSavedQueryRequest {
+  name: string;                  // Required: Query name
+  description?: string;          // Optional: Query description
+  queryType: 'direct' | 'visual' | 'auto'; // Required: Query type
+  targetIndex: string;           // Required: Target index
+  queryData: SavedQuery['queryData']; // Required: Query configuration
+  tags?: string[];               // Optional: Organization tags
+}
+```
+
+### UpdateSavedQueryRequest
+```typescript
+interface UpdateSavedQueryRequest {
+  name?: string;                 // Optional: Updated name
+  description?: string;          // Optional: Updated description
+  queryData?: SavedQuery['queryData']; // Optional: Updated query data
+  tags?: string[];               // Optional: Updated tags
+}
+```
+
+### SavedQueriesListResponse
+```typescript
+interface SavedQueriesListResponse {
+  queries: SavedQuery[];         // Array of saved queries
+  pagination: {
+    total: number;               // Total number of matching queries
+    limit: number;               // Request limit parameter
+    offset: number;              // Request offset parameter
+    hasMore: boolean;            // Whether more results are available
+  };
+}
+```
+
 ### DirectQueryRequest
 ```typescript
 interface DirectQueryRequest {
@@ -458,6 +738,107 @@ curl http://localhost:3004/api/direct-query/indexes
 ### 5. Get Index Mapping
 ```bash
 curl http://localhost:3004/api/direct-query/indexes/project-index-v1/mapping
+```
+
+### 6. Create a Saved Direct Query
+```bash
+curl -X POST http://localhost:3004/api/saved-queries \
+  -H "Content-Type: application/json" \
+  -d '{
+    "name": "Active Projects in Mozambique",
+    "description": "Find all active projects in Mozambique with project details",
+    "queryType": "direct",
+    "targetIndex": "project-index-v1",
+    "queryData": {
+      "rawQuery": {
+        "query": {
+          "bool": {
+            "must": [
+              { "term": { "status.keyword": "active" } },
+              { "term": { "Data.boundaryHierarchy.country.keyword": "Mozambique" } }
+            ]
+          }
+        },
+        "size": 50
+      },
+      "from": 0,
+      "size": 50,
+      "_source": ["id", "Data.name", "status", "Data.boundaryHierarchy"]
+    },
+    "tags": ["projects", "mozambique", "active", "production"]
+  }'
+```
+
+### 7. Create a Saved Visual Query
+```bash
+curl -X POST http://localhost:3004/api/saved-queries \
+  -H "Content-Type: application/json" \
+  -d '{
+    "name": "Household Tasks by Status",
+    "description": "Visual query to filter household tasks by completion status",
+    "queryType": "visual",
+    "targetIndex": "project-task-index-v1",
+    "queryData": {
+      "visualFields": [
+        {
+          "field": "Data.taskType",
+          "operator": "term",
+          "value": "household_survey",
+          "type": "keyword"
+        },
+        {
+          "field": "status",
+          "operator": "terms",
+          "value": ["completed", "in_progress"],
+          "type": "keyword"
+        }
+      ],
+      "rawQuery": {
+        "query": {
+          "bool": {
+            "must": [
+              { "term": { "Data.taskType.keyword": "household_survey" } },
+              { "terms": { "status.keyword": ["completed", "in_progress"] } }
+            ]
+          }
+        }
+      }
+    },
+    "tags": ["household", "tasks", "status", "survey"]
+  }'
+```
+
+### 8. List Saved Queries with Filtering
+```bash
+# Get all direct queries for a specific index
+curl "http://localhost:3004/api/saved-queries?queryType=direct&targetIndex=project-index-v1&limit=20"
+
+# Get queries with specific tags
+curl "http://localhost:3004/api/saved-queries?tags=projects,mozambique&limit=10"
+
+# Get all visual queries
+curl "http://localhost:3004/api/saved-queries?queryType=visual"
+```
+
+### 9. Execute a Saved Query
+```bash
+curl -X POST http://localhost:3004/api/saved-queries/sq_abc123def456/execute
+```
+
+### 10. Update a Saved Query
+```bash
+curl -X PUT http://localhost:3004/api/saved-queries/sq_abc123def456 \
+  -H "Content-Type: application/json" \
+  -d '{
+    "name": "Updated Active Projects Query",
+    "description": "Updated description with more details",
+    "tags": ["projects", "mozambique", "active", "updated", "v2"]
+  }'
+```
+
+### 11. Delete a Saved Query
+```bash
+curl -X DELETE http://localhost:3004/api/saved-queries/sq_abc123def456
 ```
 
 ---

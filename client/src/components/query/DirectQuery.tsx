@@ -3,9 +3,12 @@ import {
   Box,
   Typography,
   Grid,
+  Button,
 } from '@mui/material';
 import {
   Code as CodeIcon,
+  Save as SaveIcon,
+  FolderOpen as LoadIcon,
 } from '@mui/icons-material';
 
 import {
@@ -13,6 +16,8 @@ import {
   QueryResultsSection,
   ColumnFilter,
   ExportActions,
+  SaveQueryDialog,
+  SavedQueriesList,
 } from '@/components/common';
 
 import { useElasticsearchQuery } from '@/hooks/useElasticsearchQuery';
@@ -24,6 +29,9 @@ import {
   saveColumnPreferences,
   clearColumnPreferencesForIndex,
 } from '@/utils/excelExport';
+
+import { SavedQuery, CreateSavedQueryRequest } from '@/types';
+import { useSavedQueries } from '@/hooks/useSavedQueries';
 
 const DirectQuery: React.FC = () => {
   // Use shared hooks
@@ -54,6 +62,17 @@ const DirectQuery: React.FC = () => {
   const [columnFilterOpen, setColumnFilterOpen] = useState(false);
   const [columnAnchorEl, setColumnAnchorEl] = useState<HTMLButtonElement | null>(null);
   const [queryUsesFiltering, setQueryUsesFiltering] = useState(false);
+  
+  // Saved queries state
+  const [saveQueryDialogOpen, setSaveQueryDialogOpen] = useState(false);
+  const [savedQueriesListOpen, setSavedQueriesListOpen] = useState(false);
+  
+  // Saved queries hook
+  const savedQueries = useSavedQueries({
+    queryType: 'direct',
+    targetIndex: query.selectedIndex,
+    autoLoad: false,
+  });
 
   // Reset column selection when index changes
   useEffect(() => {
@@ -271,6 +290,59 @@ const DirectQuery: React.FC = () => {
     setColumnFilterOpen(false);
     setColumnAnchorEl(null);
   }, []);
+  
+  // Saved queries handlers
+  const handleSaveQuery = useCallback(async (request: CreateSavedQueryRequest) => {
+    try {
+      await savedQueries.createQuery(request);
+      // Query saved successfully - dialog will close automatically
+    } catch (error) {
+      // Error is handled by the dialog component
+      throw error;
+    }
+  }, [savedQueries]);
+  
+  const handleLoadSavedQuery = useCallback((savedQuery: SavedQuery) => {
+    if (savedQuery.queryData.rawQuery) {
+      // Set the index
+      if (savedQuery.targetIndex) {
+        query.setSelectedIndex(savedQuery.targetIndex);
+      }
+      
+      // Set the query text
+      query.setQueryText(JSON.stringify(savedQuery.queryData.rawQuery, null, 2));
+      
+      // Set pagination parameters if available
+      if (savedQuery.queryData.from !== undefined) {
+        setFrom(savedQuery.queryData.from);
+      }
+      if (savedQuery.queryData.size !== undefined) {
+        setSize(savedQuery.queryData.size);
+      }
+    }
+  }, [query]);
+  
+  const handleSaveCurrentQuery = useCallback(() => {
+    if (!query.selectedIndex || !query.queryText.trim()) {
+      return;
+    }
+    setSaveQueryDialogOpen(true);
+  }, [query.selectedIndex, query.queryText]);
+  
+  const getCurrentQueryData = useCallback(() => {
+    if (!query.queryText.trim()) return null;
+    
+    try {
+      return {
+        rawQuery: JSON.parse(query.queryText),
+        from,
+        size,
+        _source: selectedColumns.length > 0 ? selectedColumns.filter(col => !col.startsWith('_')) : undefined,
+      };
+    } catch {
+      return null;
+    }
+  }, [query.queryText, from, size, selectedColumns]);
 
   return (
     <Box sx={{ p: 2 }}>
@@ -298,6 +370,24 @@ const DirectQuery: React.FC = () => {
             onFromChange={setFrom}
             onSizeChange={setSize}
           >
+            {/* Saved Queries Buttons */}
+            <Button
+              variant="outlined"
+              startIcon={<SaveIcon />}
+              onClick={handleSaveCurrentQuery}
+              disabled={query.loading || !query.selectedIndex || !query.queryText.trim()}
+            >
+              Save Query
+            </Button>
+            
+            <Button
+              variant="outlined"
+              startIcon={<LoadIcon />}
+              onClick={() => setSavedQueriesListOpen(true)}
+              disabled={query.loading}
+            >
+              Load Query
+            </Button>
             {query.result && rows.length > 0 && (
               <ExportActions
                 onExcelExport={handleExcelExport}
@@ -347,6 +437,27 @@ const DirectQuery: React.FC = () => {
           />
         </QueryResultsSection>
       </Grid>
+      
+      {/* Saved Queries Dialogs */}
+      <SaveQueryDialog
+        open={saveQueryDialogOpen}
+        onClose={() => setSaveQueryDialogOpen(false)}
+        onSave={handleSaveQuery}
+        queryType="direct"
+        targetIndex={query.selectedIndex || ''}
+        queryData={getCurrentQueryData() || {}}
+        defaultName=""
+        defaultDescription=""
+        defaultTags={[]}
+      />
+      
+      <SavedQueriesList
+        open={savedQueriesListOpen}
+        onClose={() => setSavedQueriesListOpen(false)}
+        onQuerySelect={handleLoadSavedQuery}
+        targetIndex={query.selectedIndex}
+        queryType="direct"
+      />
     </Box>
   );
 };

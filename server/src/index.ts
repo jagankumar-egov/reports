@@ -13,6 +13,7 @@ import { elasticsearchService } from './services/elasticsearch';
 
 // Routes
 import directQueryRoutes from './routes/direct-query';
+import savedQueriesRoutes from './routes/saved-queries';
 
 // Load environment variables
 dotenv.config();
@@ -62,6 +63,7 @@ app.get('/health', (req, res) => {
 
 // API Routes
 app.use('/api/direct-query', directQueryRoutes);
+app.use('/api/saved-queries', savedQueriesRoutes);
 
 // Error handling
 app.use(errorHandler);

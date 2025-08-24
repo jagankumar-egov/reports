@@ -13,6 +13,7 @@ const logger_1 = require("./utils/logger");
 const errorHandler_1 = require("./middleware/errorHandler");
 const elasticsearch_1 = require("./services/elasticsearch");
 const direct_query_1 = __importDefault(require("./routes/direct-query"));
+const saved_queries_1 = __importDefault(require("./routes/saved-queries"));
 dotenv_1.default.config();
 console.log('DEBUG: ELASTICSEARCH_HOST =', process.env.ELASTICSEARCH_HOST);
 const app = (0, express_1.default)();
@@ -45,6 +46,7 @@ app.get('/health', (req, res) => {
     });
 });
 app.use('/api/direct-query', direct_query_1.default);
+app.use('/api/saved-queries', saved_queries_1.default);
 app.use(errorHandler_1.errorHandler);
 app.use('*', (req, res) => {
     res.status(404).json({

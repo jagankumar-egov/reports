@@ -15,6 +15,8 @@ import {
 } from '@mui/material';
 import {
   Build as BuildIcon,
+  Save as SaveIcon,
+  FolderOpen as LoadIcon,
 } from '@mui/icons-material';
 
 import {
@@ -22,6 +24,8 @@ import {
   QueryResultsSection,
   ShareableLink,
   ExportActions,
+  SaveQueryDialog,
+  SavedQueriesList,
 } from '@/components/common';
 
 import { useElasticsearchQuery } from '@/hooks/useElasticsearchQuery';
@@ -30,6 +34,8 @@ import { useExcelExport } from '@/hooks/useExcelExport';
 import { directQueryAPI } from '@/services/api';
 import { extractFieldsFromMapping, FieldInfo } from '@/utils/mappingUtils';
 import { QueryCondition } from '@/components/common/QueryBuilder';
+import { SavedQuery, CreateSavedQueryRequest } from '@/types';
+import { useSavedQueries } from '@/hooks/useSavedQueries';
 
 const QueryBuilderPage: React.FC = () => {
   // Use shared hooks
@@ -52,6 +58,17 @@ const QueryBuilderPage: React.FC = () => {
   const [fieldsError, setFieldsError] = useState<string | null>(null);
   const [builtQuery, setBuiltQuery] = useState<any>(null);
   const [conditions, setConditions] = useState<QueryCondition[]>([]);
+  
+  // Saved queries state
+  const [saveQueryDialogOpen, setSaveQueryDialogOpen] = useState(false);
+  const [savedQueriesListOpen, setSavedQueriesListOpen] = useState(false);
+  
+  // Saved queries hook
+  const savedQueries = useSavedQueries({
+    queryType: 'visual',
+    targetIndex: query.selectedIndex,
+    autoLoad: false,
+  });
 
   // Load fields when index changes
   useEffect(() => {
@@ -104,6 +121,64 @@ const QueryBuilderPage: React.FC = () => {
     }
     await query.executeQuery();
   }, [query, builtQuery]);
+  
+  // Saved queries handlers
+  const handleSaveQuery = useCallback(async (request: CreateSavedQueryRequest) => {
+    try {
+      await savedQueries.createQuery(request);
+      // Query saved successfully - dialog will close automatically
+    } catch (error) {
+      // Error is handled by the dialog component
+      throw error;
+    }
+  }, [savedQueries]);
+  
+  const handleLoadSavedQuery = useCallback((savedQuery: SavedQuery) => {
+    if (savedQuery.queryData.visualFields) {
+      // Set the index
+      if (savedQuery.targetIndex) {
+        query.setSelectedIndex(savedQuery.targetIndex);
+      }
+      
+      // Convert saved visual fields back to conditions
+      const loadedConditions: QueryCondition[] = savedQuery.queryData.visualFields.map((field, index) => ({
+        id: `condition-${index}`,
+        field: field.field,
+        operator: field.operator,
+        value: field.value,
+        type: field.type,
+      }));
+      
+      setConditions(loadedConditions);
+      
+      // If there's a raw query, also set that
+      if (savedQuery.queryData.rawQuery) {
+        query.setQueryText(JSON.stringify(savedQuery.queryData.rawQuery, null, 2));
+        setBuiltQuery(savedQuery.queryData.rawQuery);
+      }
+    }
+  }, [query]);
+  
+  const handleSaveCurrentQuery = useCallback(() => {
+    if (!query.selectedIndex || conditions.length === 0) {
+      return;
+    }
+    setSaveQueryDialogOpen(true);
+  }, [query.selectedIndex, conditions]);
+  
+  const getCurrentQueryData = useCallback(() => {
+    if (conditions.length === 0) return null;
+    
+    return {
+      visualFields: conditions.map(condition => ({
+        field: condition.field,
+        operator: condition.operator,
+        value: condition.value,
+        type: condition.type,
+      })),
+      rawQuery: builtQuery,
+    };
+  }, [conditions, builtQuery]);
 
 
   const { columns, rows } = query.result ? query.formatResultsForTable(pagination.getPaginatedHits(query.result)) : { columns: [], rows: [] };
@@ -187,7 +262,7 @@ const QueryBuilderPage: React.FC = () => {
                     </Select>
                   </FormControl>
                 </Grid>
-                <Grid item xs={12} sm={4}>
+                <Grid item xs={12} sm={3}>
                   <Button
                     variant="contained"
                     onClick={handleExecute}
@@ -207,6 +282,30 @@ const QueryBuilderPage: React.FC = () => {
                     size="large"
                   >
                     Clear Results
+                  </Button>
+                </Grid>
+                <Grid item xs={12} sm={2}>
+                  <Button
+                    variant="outlined"
+                    startIcon={<SaveIcon />}
+                    onClick={handleSaveCurrentQuery}
+                    disabled={query.loading || !query.selectedIndex || conditions.length === 0}
+                    fullWidth
+                    size="large"
+                  >
+                    Save Query
+                  </Button>
+                </Grid>
+                <Grid item xs={12} sm={2}>
+                  <Button
+                    variant="outlined"
+                    startIcon={<LoadIcon />}
+                    onClick={() => setSavedQueriesListOpen(true)}
+                    disabled={query.loading}
+                    fullWidth
+                    size="large"
+                  >
+                    Load Query
                   </Button>
                 </Grid>
                 
@@ -261,6 +360,27 @@ const QueryBuilderPage: React.FC = () => {
           emptyMessage="No results found for your query"
         />
       </Grid>
+      
+      {/* Saved Queries Dialogs */}
+      <SaveQueryDialog
+        open={saveQueryDialogOpen}
+        onClose={() => setSaveQueryDialogOpen(false)}
+        onSave={handleSaveQuery}
+        queryType="visual"
+        targetIndex={query.selectedIndex || ''}
+        queryData={getCurrentQueryData() || {}}
+        defaultName=""
+        defaultDescription=""
+        defaultTags={[]}
+      />
+      
+      <SavedQueriesList
+        open={savedQueriesListOpen}
+        onClose={() => setSavedQueriesListOpen(false)}
+        onQuerySelect={handleLoadSavedQuery}
+        targetIndex={query.selectedIndex}
+        queryType="visual"
+      />
     </Box>
   );
 };

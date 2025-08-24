@@ -12,5 +12,7 @@ export { default as ShareableLink } from './ShareableLink';
 export { default as QueryExecutionCard } from './QueryExecutionCard';
 export { default as QueryResultsSection } from './QueryResultsSection';
 export { default as QueryBuilder } from './QueryBuilder';
+export { default as SaveQueryDialog } from './SaveQueryDialog';
+export { default as SavedQueriesList } from './SavedQueriesList';
 
 export type { TableRow, TableColumn } from './DataTable';

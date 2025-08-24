@@ -56,3 +56,54 @@ export interface ElasticsearchResponse {
   };
   aggregations?: Record<string, any>;
 }
+
+// Saved Queries Types
+export interface SavedQuery {
+  id: string;
+  name: string;
+  description?: string;
+  queryType: 'direct' | 'visual' | 'auto';
+  targetIndex: string;
+  queryData: {
+    // For direct queries
+    rawQuery?: any;
+    from?: number;
+    size?: number;
+    _source?: string[] | boolean;
+    
+    // For visual queries
+    visualFields?: Array<{
+      field: string;
+      operator: string;
+      value: any;
+      type: string;
+    }>;
+    
+    // For auto queries
+    urlParams?: Record<string, string>;
+  };
+  metadata: {
+    createdAt: string;
+    updatedAt: string;
+    createdBy?: string;
+    tags?: string[];
+    executionCount?: number;
+    lastExecutedAt?: string;
+  };
+}
+
+export interface CreateSavedQueryRequest {
+  name: string;
+  description?: string;
+  queryType: 'direct' | 'visual' | 'auto';
+  targetIndex: string;
+  queryData: SavedQuery['queryData'];
+  tags?: string[];
+}
+
+export interface UpdateSavedQueryRequest {
+  name?: string;
+  description?: string;
+  queryData?: SavedQuery['queryData'];
+  tags?: string[];
+}
