@@ -1,0 +1,87 @@
+{"took":1,"timed_out":false,"_shards":{"total":1,"successful":1,"skipped":0,"failed":0},"hits":{"total":{"value":1,"relation":"eq"},"max_score":1.0,"hits":[{"_index":"stock-index-v1","_type":"_doc","_id":"dEil2pgBkVJoEvP61GNy","_score":1.0,"_ignored":["Data.additionalDetails.01|11|10|21|01|11|10|21|01|11|10|21|01|11|10|21|01|11|10|21.keyword","Data.additionalFields.fields.value.keyword"],"_source":{
+          "Data": {
+            "boundaryHierarchy": {
+              "country": "Mozambique",
+              "province": "Grand Gedeh"
+            },
+            "reason": "RECEIVED",
+            "role": "WAREHOUSE_MANAGER",
+            "lastModifiedTime": 1744112324100,
+            "taskDates": "2025-04-08",
+            "waybillNumber": "tsgsh666",
+            "transactingFacilityId": "F-2025-04-08-008931",
+            "additionalFields": {
+              "schema": "Stock",
+              "fields": [
+                {
+                  "value": "Lata",
+                  "key": "name"
+                },
+                {
+                  "value": "5",
+                  "key": "waybill_quantity"
+                },
+                {
+                  "value": "vdbdb667",
+                  "key": "vehicle_number"
+                },
+                {
+                  "value": "12.9288616",
+                  "key": "lat"
+                },
+                {
+                  "value": "77.6279696",
+                  "key": "lng"
+                },
+                {
+                  "value": "04064945000576|2023-10-31 00:00:00.000|T23231G22|G2232615223263120001|04064945000576|2023-10-31 00:00:00.000|T23231G22|G2232615223263120002|04064945000576|2023-10-31 00:00:00.000|T23231G22|G2232615223263120003|04064945000576|2023-10-31 00:00:00.000|T23231G22|G2232615223263120004|04064945000576|2023-10-31 00:00:00.000|T23231G22|G2232615223263120005",
+                  "key": "01|11|10|21|01|11|10|21|01|11|10|21|01|11|10|21|01|11|10|21"
+                }
+              ],
+              "version": 1
+            },
+            "syncedTime": 1744112572377,
+            "projectType": "LLIN-mz",
+            "clientReferenceId": "06c4bc40-146e-11f0-abe4-33e3e61d59f4",
+            "productName": "Bednet - Grade 1",
+            "transactingFacilityLevel": null,
+            "dateOfEntry": 1744112572377,
+            "transactingFacilityType": "WAREHOUSE",
+            "syncedDate": "2025-04-08",
+            "createdTime": 1744112324100,
+            "id": "S-2025-04-08-000574",
+            "facilityName": "Facility Storage Grand Gedeh",
+            "syncedTimeStamp": "2025-04-08T11:42:52.377Z",
+            "facilityLevel": null,
+            "facilityTarget": null,
+            "physicalCount": 5,
+            "facilityId": "F-2025-04-08-008932",
+            "transactingFacilityName": "Facility Storage Mbazi Highlands",
+            "facilityType": "WAREHOUSE",
+            "lastModifiedBy": "49493286-6e84-4cf0-8e54-e79d745bebc4",
+            "eventType": "RECEIVED",
+            "nameOfUser": "Lata",
+            "userName": "WHManager-7",
+            "boundaryHierarchyCode": {
+              "country": "MICROPLAN_MO",
+              "province": "MICROPLAN_MO_13_GRAND_GEDEH"
+            },
+            "additionalDetails": {
+              "lng": 77.6279696,
+              "01|11|10|21|01|11|10|21|01|11|10|21|01|11|10|21|01|11|10|21": "04064945000576|2023-10-31 00:00:00.000|T23231G22|G2232615223263120001|04064945000576|2023-10-31 00:00:00.000|T23231G22|G2232615223263120002|04064945000576|2023-10-31 00:00:00.000|T23231G22|G2232615223263120003|04064945000576|2023-10-31 00:00:00.000|T23231G22|G2232615223263120004|04064945000576|2023-10-31 00:00:00.000|T23231G22|G2232615223263120005",
+              "vehicle_number": "vdbdb667",
+              "name": "Lata",
+              "cycleIndex": null,
+              "waybill_quantity": "5",
+              "lat": 12.9288616
+            },
+            "userAddress": "dg",
+            "projectTypeId": "dbd45c31-de9e-4e62-a9b6-abb818928fd1",
+            "productVariant": "PVAR-2025-01-08-000094",
+            "createdBy": "49493286-6e84-4cf0-8e54-e79d745bebc4",
+            "tenantId": "mz",
+            "projectName": "LLIN",
+            "projectId": "7183182d-eb02-46f0-a7e9-81d6bd972b68",
+            "@timestamp": "2025-04-08T11:38:44.100Z"
+          }
+        }}]}}

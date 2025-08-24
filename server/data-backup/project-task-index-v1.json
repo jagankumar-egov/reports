@@ -1,0 +1,20 @@
+{"took":1,"timed_out":false,"_shards":{"total":1,"successful":1,"skipped":0,"failed":0},"hits":{"total":{"value":4,"relation":"eq"},"max_score":1.0,"hits":[{"_index":"project-task-index-v1","_type":"_doc","_id":"67439713-55e6-4415-b05d-c6c796add10a","_score":1.0,"_source":{"Data":{"projectId":"0d9e3011-b7a8-4a3c-ab99-430b4404e4d9","projectName":"Ondo_Bednet_August_Sept","projectTypeId":"Bednet","taskType":"DELIVERY","taskId":"task-001","geoPoint":[5.2523384,7.3670977],"@timestamp":"2025-08-23T09:00:00Z","productName":"Bednet","memberCount":3,"administrativeArea":"Okitipupa","quantity":5,"userName":"dist_user_03","fullName":"Olumide Akinwale"}}},{"_index":"project-task-index-v1","_type":"_doc","_id":"7b7295b5-71b9-47de-8926-547fcd4cf4e9","_score":1.0,"_source":{"Data":{"projectId":"1234-5678-9999","projectName":"Nigeria-MC-Ondo-Test1","projectTypeId":"Bednet","taskType":"DELIVERY","taskId":"task-002","geoPoint":[6.45,3.39],"@timestamp":"2025-08-23T10:00:00Z","productName":"Bednet","memberCount":4,"administrativeArea":"Akure","quantity":8,"userName":"dist_user_05","fullName":"Chioma Okafor"}}},{"_index":"project-task-index-v1","_type":"_doc","_id":"aa21bb55-2e90-48ff-b1c1-1f43dcb2345f","_score":1.0,"_source":{"Data":{"projectId":"5678-4444-2222","projectName":"Nigeria-MC-Ondo-Test2","projectTypeId":"Bednet","taskType":"DELIVERY","taskId":"task-003","geoPoint":[7.15,4.82],"@timestamp":"2025-08-23T11:00:00Z","productName":"Bednet","memberCount":6,"administrativeArea":"Ondo West","quantity":12,"userName":"dist_user_07","fullName":"Bamidele Johnson"}}},{"_index":"project-task-index-v1","_type":"_doc","_id":"c0ie2pgBkVJoEvP6zGNx","_score":1.0,"_source":{
+                    "Data": {
+                        "projectId": "0d9e3011-b7a8-4a3c-ab99-430b4404e4d9",
+                        "projectName": "Ondo_Bednet_August_Sept",
+                        "projectTypeId": "Bednet",
+                        "taskType": "DELIVERY",
+                        "taskId": "task-001",
+                        "geoPoint": [
+                            5.2523384,
+                            7.3670977
+                        ],
+                        "@timestamp": "2025-08-23T09:00:00Z",
+                        "productName": "Bednet",
+                        "memberCount": 3,
+                        "administrativeArea": "Okitipupa",
+                        "quantity": 5,
+                        "userName": "dist_user_03",
+                        "fullName": "Olumide Akinwale"
+                    }
+                }}]}}

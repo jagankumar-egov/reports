@@ -1,0 +1,90 @@
+{"took":1,"timed_out":false,"_shards":{"total":1,"successful":1,"skipped":0,"failed":0},"hits":{"total":{"value":1,"relation":"eq"},"max_score":1.0,"hits":[{"_index":"household-index-v1","_type":"_doc","_id":"dUit2pgBkVJoEvP6KWO6","_score":1.0,"_source":{
+          "Data": {
+            "boundaryHierarchy": {
+              "country": "MOZAMBIQUE",
+              "province": "Niassa",
+              "district": "Cuamba",
+              "locality": "Titimane Sede",
+              "administrativeProvince": "Etatara",
+              "village": "Titimane sede"
+            },
+            "role": "COMMUNITY_DISTRIBUTOR",
+            "taskDates": "2025-01-27",
+            "nameOfUser": "CUAM CD zero seis",
+            "userName": "CUAM22-01-06",
+            "boundaryHierarchyCode": {
+              "country": "mz",
+              "province": "hqnk3sqb9neBsVUvjdaz9k",
+              "district": "kgL9ep92DdMDYWR6gqzrQL",
+              "locality": "HdyL9i4fFPPW2CVJZZTX8y",
+              "administrativeProvince": "nH4h48rBFEX3xc7y2EiZNa",
+              "village": "RKCS33E3NZ8XaQ8GdVGDCg"
+            },
+            "geoPoint": [
+              36.3670486,
+              -14.9179309
+            ],
+            "additionalDetails": {
+              "projectTypeId": "cf8a6074-0696-4ce2-b3a3-30bd059f022e",
+              "cycleIndex": "01",
+              "projectId": "4919fad0-b127-423b-9e3d-33e32293da27"
+            },
+            "userAddress": "Titimane",
+            "syncedDate": "2025-01-27",
+            "@timestamp": "2025-01-27T15:41:28.160Z",
+            "household": {
+              "clientAuditDetails": {
+                "lastModifiedTime": 1737992488160,
+                "createdBy": "1b9acb33-36d5-4ee8-868c-5901a38e498c",
+                "lastModifiedBy": "1b9acb33-36d5-4ee8-868c-5901a38e498c",
+                "createdTime": 1737992488160
+              },
+              "address": {
+                "locationAccuracy": 4.65500020980835,
+                "pincode": null,
+                "city": null,
+                "latitude": -14.9179309,
+                "locality": {
+                  "code": "RKCS33E3NZ8XaQ8GdVGDCg",
+                  "materializedPath": null,
+                  "latitude": null,
+                  "name": null,
+                  "label": null,
+                  "longitude": null
+                },
+                "clientReferenceId": null,
+                "type": "CORRESPONDENCE",
+                "buildingName": null,
+                "street": null,
+                "tenantId": "mz",
+                "addressLine1": null,
+                "addressLine2": null,
+                "id": "a8d82769-f5bf-4359-a316-361ef00711c5",
+                "doorNo": null,
+                "landmark": null,
+                "longitude": 36.3670486
+              },
+              "additionalFields": {
+                "schema": "Household",
+                "fields": [],
+                "version": 1
+              },
+              "isDeleted": false,
+              "rowVersion": 1,
+              "memberCount": 4,
+              "auditDetails": {
+                "lastModifiedTime": 1737992626950,
+                "createdBy": "1b9acb33-36d5-4ee8-868c-5901a38e498c",
+                "lastModifiedBy": "1b9acb33-36d5-4ee8-868c-5901a38e498c",
+                "createdTime": 1737992626950
+              },
+              "tenantId": "mz",
+              "id": "H-2025-01-27-2874326",
+              "clientReferenceId": "2c4bae01-dcc5-11ef-9d1e-0305ddbb268c"
+            },
+            "syncedTimeStamp": "2025-01-27T15:43:46.950Z",
+            "isMovedFromProduction": true,
+            "projectTypeId": "ea1bb2e7-06d8-4fe4-ba1e-f4a6363a21be"
+          }
+        }
+      }]}}

@@ -1,0 +1,35 @@
+{
+  "backup_timestamp": "20250824_120703",
+  "backup_date": "2025-08-24T12:07:09.449873",
+  "elasticsearch_url": "http://localhost:9200",
+  "indexes": {
+    "project-index-v1": {
+      "data_file": "project-index-v1.json",
+      "mapping_file": "project-index-v1-mapping.json",
+      "data_file_exists": true,
+      "mapping_file_exists": true,
+      "document_count": 4
+    },
+    "project-task-index-v1": {
+      "data_file": "project-task-index-v1.json",
+      "mapping_file": "project-task-index-v1-mapping.json",
+      "data_file_exists": true,
+      "mapping_file_exists": true,
+      "document_count": 4
+    },
+    "household-index-v1": {
+      "data_file": "household-index-v1.json",
+      "mapping_file": "household-index-v1-mapping.json",
+      "data_file_exists": true,
+      "mapping_file_exists": true,
+      "document_count": 1
+    },
+    "stock-index-v1": {
+      "data_file": "stock-index-v1.json",
+      "mapping_file": "stock-index-v1-mapping.json",
+      "data_file_exists": true,
+      "mapping_file_exists": true,
+      "document_count": 1
+    }
+  }
+}

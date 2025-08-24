@@ -15,6 +15,7 @@ import { elasticsearchService } from './services/elasticsearch';
 import queryRoutes from './routes/query';
 import fieldsRoutes from './routes/fields';
 import projectsRoutes from './routes/projects';
+import directQueryRoutes from './routes/direct-query';
 
 // Load environment variables
 dotenv.config();
@@ -66,6 +67,7 @@ app.get('/health', (req, res) => {
 app.use('/api/query', queryRoutes);
 app.use('/api/fields', fieldsRoutes);
 app.use('/api/projects', projectsRoutes);
+app.use('/api/direct-query', directQueryRoutes);
 
 // Error handling
 app.use(errorHandler);

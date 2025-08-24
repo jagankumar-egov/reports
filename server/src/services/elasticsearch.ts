@@ -328,6 +328,77 @@ class ElasticsearchService {
     return { ...this.config.projectIndexMapping };
   }
 
+  async executeDirectQuery(params: {
+    index: string;
+    query: any;
+    from?: number;
+    size?: number;
+  }): Promise<ElasticsearchResponse> {
+    const operationStartTime = Date.now();
+    const operationId = Math.random().toString(36).substr(2, 9);
+    
+    logger.info(`[ES-DIRECT-${operationId}] Starting direct Elasticsearch query`, {
+      operationId,
+      index: params.index,
+      from: params.from || 0,
+      size: params.size || 10,
+    });
+
+    if (!this.client) {
+      logger.error(`[ES-DIRECT-${operationId}] Elasticsearch client not initialized`);
+      throw new Error('Elasticsearch client not initialized');
+    }
+
+    // Validate index access
+    this.validateIndexAccess([params.index]);
+
+    try {
+      const searchStartTime = Date.now();
+      
+      logger.info(`[ES-DIRECT-${operationId}] Executing direct query`, {
+        operationId,
+        host: this.config.host,
+        index: params.index,
+        query: JSON.stringify(params.query),
+        from: params.from || 0,
+        size: params.size || 10,
+      });
+      
+      const response = await this.client.search({
+        index: params.index,
+        body: {
+          ...params.query,
+          from: params.from || 0,
+          size: params.size || 10,
+        },
+      });
+
+      const searchTime = Date.now() - searchStartTime;
+      const totalTime = Date.now() - operationStartTime;
+      
+      logger.info(`[ES-DIRECT-${operationId}] Direct query completed successfully`, {
+        operationId,
+        searchTime: `${searchTime}ms`,
+        totalTime: `${totalTime}ms`,
+        esTook: `${response.took}ms`,
+        hits: typeof response.hits.total === 'number' ? response.hits.total : response.hits.total?.value || 0,
+      });
+
+      return response as any;
+    } catch (error) {
+      const errorTime = Date.now() - operationStartTime;
+      logger.error(`[ES-DIRECT-${operationId}] Direct query failed after ${errorTime}ms`, {
+        operationId,
+        error: error instanceof Error ? error.message : String(error),
+        host: this.config.host,
+        index: params.index,
+        errorType: error instanceof Error ? error.name : 'UnknownError',
+        statusCode: (error as any)?.meta?.statusCode,
+      });
+      throw error;
+    }
+  }
+
   async ping(): Promise<boolean> {
     const operationStartTime = Date.now();
     const operationId = Math.random().toString(36).substr(2, 9);

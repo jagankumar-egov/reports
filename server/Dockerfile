@@ -8,12 +8,15 @@ RUN apk add --no-cache dumb-init
 # Copy package files first for better caching
 COPY package*.json yarn.lock ./
 
-# Install dependencies
-RUN yarn install --production --frozen-lockfile
+# Install all dependencies (including dev for build)
+RUN yarn install --frozen-lockfile
 
 # Copy source code and build
 COPY . .
 RUN yarn build
+
+# Remove dev dependencies after build
+RUN yarn install --production --frozen-lockfile
 
 # Create non-root user
 RUN addgroup -g 1001 -S nodejs && \

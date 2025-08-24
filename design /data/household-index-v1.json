@@ -1,0 +1,689 @@
+{
+  "took": 7,
+  "timed_out": false,
+  "_shards": {
+    "total": 1,
+    "successful": 1,
+    "skipped": 0,
+    "failed": 0
+  },
+  "hits": {
+    "total": {
+      "value": 10000,
+      "relation": "gte"
+    },
+    "max_score": 1,
+    "hits": [
+      {
+        "_index": "household-index-v1",
+        "_id": "H-2025-08-20-009839",
+        "_score": 1,
+        "_source": {
+          "hasErrors": false,
+          "address": {
+            "locationAccuracy": null,
+            "pincode": null,
+            "city": null,
+            "latitude": 12.9288776,
+            "locality": null,
+            "clientReferenceId": null,
+            "type": "PERMANENT",
+            "buildingName": null,
+            "street": null,
+            "tenantId": "dev",
+            "addressLine1": null,
+            "addressLine2": null,
+            "id": "dd782e4f-4150-48ce-baaf-9ce7bbb3e7d0",
+            "doorNo": null,
+            "landmark": null,
+            "longitude": 77.627952
+          },
+          "rowVersion": 1,
+          "additionalFields": {
+            "schema": "Household",
+            "fields": [
+              {
+                "value": "0",
+                "key": "childrenCount"
+              },
+              {
+                "value": "0",
+                "key": "pregnantWomenCount"
+              },
+              {
+                "value": "1",
+                "key": "memberCount"
+              }
+            ],
+            "version": 1
+          },
+          "memberCount": 1,
+          "source": null,
+          "clientReferenceId": "4c08ce80-7dba-11f0-9a54-45f06bc24fc2",
+          "clientAuditDetails": {
+            "lastModifiedTime": 1755689954156,
+            "createdBy": "da778602-16fd-4aab-85e1-d656aecac7e8",
+            "lastModifiedBy": "da778602-16fd-4aab-85e1-d656aecac7e8",
+            "createdTime": 1755689954156
+          },
+          "@timestamp": "2025-08-20T11:39:23.428Z",
+          "isDeleted": false,
+          "ingestionTime": "2025-08-20T11:39:23.451863097Z",
+          "auditDetails": {
+            "lastModifiedTime": 1755689963428,
+            "createdBy": "da778602-16fd-4aab-85e1-d656aecac7e8",
+            "lastModifiedBy": "da778602-16fd-4aab-85e1-d656aecac7e8",
+            "createdTime": 1755689963428
+          },
+          "tenantId": "dev",
+          "id": "H-2025-08-20-009839",
+          "applicationId": null,
+          "householdType": "FAMILY"
+        }
+      },
+      {
+        "_index": "household-index-v1",
+        "_id": "H-2025-08-20-009838",
+        "_score": 1,
+        "_source": {
+          "hasErrors": false,
+          "address": {
+            "locationAccuracy": null,
+            "pincode": null,
+            "city": null,
+            "latitude": 12.928876,
+            "locality": null,
+            "clientReferenceId": null,
+            "type": "PERMANENT",
+            "buildingName": null,
+            "street": null,
+            "tenantId": "dev",
+            "addressLine1": null,
+            "addressLine2": null,
+            "id": "c6adbb32-1120-4eb6-a3c0-3e082d8396ad",
+            "doorNo": null,
+            "landmark": null,
+            "longitude": 77.6279676
+          },
+          "rowVersion": 1,
+          "additionalFields": {
+            "schema": "Household",
+            "fields": [
+              {
+                "value": "0",
+                "key": "childrenCount"
+              },
+              {
+                "value": "0",
+                "key": "pregnantWomenCount"
+              },
+              {
+                "value": "4",
+                "key": "memberCount"
+              }
+            ],
+            "version": 1
+          },
+          "memberCount": 4,
+          "source": null,
+          "clientReferenceId": "799bc660-7d90-11f0-a070-a946bf4a7e3b",
+          "clientAuditDetails": {
+            "lastModifiedTime": 1755671991754,
+            "createdBy": "da778602-16fd-4aab-85e1-d656aecac7e8",
+            "lastModifiedBy": "da778602-16fd-4aab-85e1-d656aecac7e8",
+            "createdTime": 1755671991754
+          },
+          "@timestamp": "2025-08-20T06:49:24.151Z",
+          "isDeleted": false,
+          "ingestionTime": "2025-08-20T06:49:24.176076072Z",
+          "auditDetails": {
+            "lastModifiedTime": 1755672564151,
+            "createdBy": "da778602-16fd-4aab-85e1-d656aecac7e8",
+            "lastModifiedBy": "da778602-16fd-4aab-85e1-d656aecac7e8",
+            "createdTime": 1755672564151
+          },
+          "tenantId": "dev",
+          "id": "H-2025-08-20-009838",
+          "applicationId": null,
+          "householdType": "FAMILY"
+        }
+      },
+      {
+        "_index": "household-index-v1",
+        "_id": "H-2025-08-20-009837",
+        "_score": 1,
+        "_source": {
+          "hasErrors": false,
+          "address": {
+            "locationAccuracy": null,
+            "pincode": null,
+            "city": null,
+            "latitude": 12.9288792,
+            "locality": null,
+            "clientReferenceId": null,
+            "type": "PERMANENT",
+            "buildingName": null,
+            "street": null,
+            "tenantId": "dev",
+            "addressLine1": null,
+            "addressLine2": null,
+            "id": "cbeb1cf2-1c40-49e5-9afe-e36663df912e",
+            "doorNo": null,
+            "landmark": null,
+            "longitude": 77.6279539
+          },
+          "rowVersion": 1,
+          "additionalFields": {
+            "schema": "Household",
+            "fields": [
+              {
+                "value": "0",
+                "key": "childrenCount"
+              },
+              {
+                "value": "0",
+                "key": "pregnantWomenCount"
+              },
+              {
+                "value": "5",
+                "key": "memberCount"
+              }
+            ],
+            "version": 1
+          },
+          "memberCount": 5,
+          "source": null,
+          "clientReferenceId": "41154140-7d90-11f0-92e0-c15b5fe1aff8",
+          "clientAuditDetails": {
+            "lastModifiedTime": 1755671896920,
+            "createdBy": "da778602-16fd-4aab-85e1-d656aecac7e8",
+            "lastModifiedBy": "da778602-16fd-4aab-85e1-d656aecac7e8",
+            "createdTime": 1755671896920
+          },
+          "@timestamp": "2025-08-20T06:39:24.078Z",
+          "isDeleted": false,
+          "ingestionTime": "2025-08-20T06:39:24.096618421Z",
+          "auditDetails": {
+            "lastModifiedTime": 1755671964078,
+            "createdBy": "da778602-16fd-4aab-85e1-d656aecac7e8",
+            "lastModifiedBy": "da778602-16fd-4aab-85e1-d656aecac7e8",
+            "createdTime": 1755671964078
+          },
+          "tenantId": "dev",
+          "id": "H-2025-08-20-009837",
+          "applicationId": null,
+          "householdType": "FAMILY"
+        }
+      },
+      {
+        "_index": "household-index-v1",
+        "_id": "H-2025-08-20-009836",
+        "_score": 1,
+        "_source": {
+          "hasErrors": false,
+          "address": {
+            "locationAccuracy": null,
+            "pincode": null,
+            "city": null,
+            "latitude": 12.9288777,
+            "locality": null,
+            "clientReferenceId": null,
+            "type": "PERMANENT",
+            "buildingName": null,
+            "street": null,
+            "tenantId": "dev",
+            "addressLine1": null,
+            "addressLine2": null,
+            "id": "11f00357-454a-4194-8377-73f14a966f1d",
+            "doorNo": null,
+            "landmark": null,
+            "longitude": 77.6279678
+          },
+          "rowVersion": 1,
+          "additionalFields": {
+            "schema": "Household",
+            "fields": [
+              {
+                "value": "0",
+                "key": "childrenCount"
+              },
+              {
+                "value": "0",
+                "key": "pregnantWomenCount"
+              },
+              {
+                "value": "4",
+                "key": "memberCount"
+              }
+            ],
+            "version": 1
+          },
+          "memberCount": 4,
+          "source": null,
+          "clientReferenceId": "0c9ca340-7d90-11f0-9bea-1b26cfa1455b",
+          "clientAuditDetails": {
+            "lastModifiedTime": 1755671808888,
+            "createdBy": "da778602-16fd-4aab-85e1-d656aecac7e8",
+            "lastModifiedBy": "da778602-16fd-4aab-85e1-d656aecac7e8",
+            "createdTime": 1755671808888
+          },
+          "@timestamp": "2025-08-20T06:37:49.867Z",
+          "isDeleted": false,
+          "ingestionTime": "2025-08-20T06:37:49.888998997Z",
+          "auditDetails": {
+            "lastModifiedTime": 1755671869867,
+            "createdBy": "da778602-16fd-4aab-85e1-d656aecac7e8",
+            "lastModifiedBy": "da778602-16fd-4aab-85e1-d656aecac7e8",
+            "createdTime": 1755671869867
+          },
+          "tenantId": "dev",
+          "id": "H-2025-08-20-009836",
+          "applicationId": null,
+          "householdType": "FAMILY"
+        }
+      },
+      {
+        "_index": "household-index-v1",
+        "_id": "H-2025-08-20-009835",
+        "_score": 1,
+        "_source": {
+          "hasErrors": false,
+          "address": {
+            "locationAccuracy": null,
+            "pincode": null,
+            "city": null,
+            "latitude": 12.9288812,
+            "locality": null,
+            "clientReferenceId": null,
+            "type": "PERMANENT",
+            "buildingName": null,
+            "street": null,
+            "tenantId": "dev",
+            "addressLine1": null,
+            "addressLine2": null,
+            "id": "b2faeab6-2877-4165-b908-677d0b15d2cf",
+            "doorNo": null,
+            "landmark": null,
+            "longitude": 77.6279653
+          },
+          "rowVersion": 1,
+          "additionalFields": {
+            "schema": "Household",
+            "fields": [
+              {
+                "value": "0",
+                "key": "childrenCount"
+              },
+              {
+                "value": "0",
+                "key": "pregnantWomenCount"
+              },
+              {
+                "value": "6",
+                "key": "memberCount"
+              }
+            ],
+            "version": 1
+          },
+          "memberCount": 6,
+          "source": null,
+          "clientReferenceId": "cce4afe0-7d8f-11f0-8aee-ed29537a5ec6",
+          "clientAuditDetails": {
+            "lastModifiedTime": 1755671701986,
+            "createdBy": "da778602-16fd-4aab-85e1-d656aecac7e8",
+            "lastModifiedBy": "da778602-16fd-4aab-85e1-d656aecac7e8",
+            "createdTime": 1755671701986
+          },
+          "@timestamp": "2025-08-20T06:36:14.820Z",
+          "isDeleted": false,
+          "ingestionTime": "2025-08-20T06:36:14.840057253Z",
+          "auditDetails": {
+            "lastModifiedTime": 1755671774820,
+            "createdBy": "da778602-16fd-4aab-85e1-d656aecac7e8",
+            "lastModifiedBy": "da778602-16fd-4aab-85e1-d656aecac7e8",
+            "createdTime": 1755671774820
+          },
+          "tenantId": "dev",
+          "id": "H-2025-08-20-009835",
+          "applicationId": null,
+          "householdType": "FAMILY"
+        }
+      },
+      {
+        "_index": "household-index-v1",
+        "_id": "H-2025-08-20-009834",
+        "_score": 1,
+        "_source": {
+          "hasErrors": false,
+          "address": {
+            "locationAccuracy": null,
+            "pincode": null,
+            "city": null,
+            "latitude": 12.9288761,
+            "locality": null,
+            "clientReferenceId": null,
+            "type": "PERMANENT",
+            "buildingName": null,
+            "street": null,
+            "tenantId": "dev",
+            "addressLine1": null,
+            "addressLine2": null,
+            "id": "43576312-e0a8-4bf4-85e9-16f765f23062",
+            "doorNo": null,
+            "landmark": null,
+            "longitude": 77.6279639
+          },
+          "rowVersion": 1,
+          "additionalFields": {
+            "schema": "Household",
+            "fields": [
+              {
+                "value": "0",
+                "key": "childrenCount"
+              },
+              {
+                "value": "0",
+                "key": "pregnantWomenCount"
+              },
+              {
+                "value": "1",
+                "key": "memberCount"
+              }
+            ],
+            "version": 1
+          },
+          "memberCount": 1,
+          "source": null,
+          "clientReferenceId": "1a090740-7d8f-11f0-98dd-73a649641f44",
+          "clientAuditDetails": {
+            "lastModifiedTime": 1755671401912,
+            "createdBy": "da778602-16fd-4aab-85e1-d656aecac7e8",
+            "lastModifiedBy": "da778602-16fd-4aab-85e1-d656aecac7e8",
+            "createdTime": 1755671401912
+          },
+          "@timestamp": "2025-08-20T06:34:26.621Z",
+          "isDeleted": false,
+          "ingestionTime": "2025-08-20T06:34:26.642203003Z",
+          "auditDetails": {
+            "lastModifiedTime": 1755671666621,
+            "createdBy": "da778602-16fd-4aab-85e1-d656aecac7e8",
+            "lastModifiedBy": "da778602-16fd-4aab-85e1-d656aecac7e8",
+            "createdTime": 1755671666621
+          },
+          "tenantId": "dev",
+          "id": "H-2025-08-20-009834",
+          "applicationId": null,
+          "householdType": "FAMILY"
+        }
+      },
+      {
+        "_index": "household-index-v1",
+        "_id": "H-2025-08-07-009752",
+        "_score": 1,
+        "_source": {
+          "hasErrors": false,
+          "address": {
+            "locationAccuracy": null,
+            "pincode": null,
+            "city": null,
+            "latitude": -24.0508333,
+            "locality": null,
+            "clientReferenceId": null,
+            "type": "PERMANENT",
+            "buildingName": null,
+            "street": null,
+            "tenantId": "dev",
+            "addressLine1": null,
+            "addressLine2": null,
+            "id": "3598f1ce-c7cf-431b-b2d5-5e8c88faab24",
+            "doorNo": null,
+            "landmark": null,
+            "longitude": 33.3240483
+          },
+          "rowVersion": 1,
+          "additionalFields": {
+            "schema": "Household",
+            "fields": [
+              {
+                "value": "0",
+                "key": "childrenCount"
+              },
+              {
+                "value": "2",
+                "key": "pregnantWomenCount"
+              },
+              {
+                "value": "1",
+                "key": "memberCount"
+              }
+            ],
+            "version": 1
+          },
+          "memberCount": 1,
+          "source": null,
+          "clientReferenceId": "d12ec500-7370-11f0-ace4-cb2a14b5d143",
+          "clientAuditDetails": {
+            "lastModifiedTime": 1754558883170,
+            "createdBy": "9b69e0d8-2233-4a00-9f61-329908bc153a",
+            "lastModifiedBy": "9b69e0d8-2233-4a00-9f61-329908bc153a",
+            "createdTime": 1754558883170
+          },
+          "@timestamp": "2025-08-07T09:28:28.022Z",
+          "isDeleted": false,
+          "ingestionTime": "2025-08-07T09:28:28.040845908Z",
+          "auditDetails": {
+            "lastModifiedTime": 1754558908022,
+            "createdBy": "9b69e0d8-2233-4a00-9f61-329908bc153a",
+            "lastModifiedBy": "9b69e0d8-2233-4a00-9f61-329908bc153a",
+            "createdTime": 1754558908022
+          },
+          "tenantId": "dev",
+          "id": "H-2025-08-07-009752",
+          "applicationId": null,
+          "householdType": "FAMILY"
+        }
+      },
+      {
+        "_index": "household-index-v1",
+        "_id": "H-2025-08-07-009753",
+        "_score": 1,
+        "_source": {
+          "hasErrors": false,
+          "address": {
+            "locationAccuracy": null,
+            "pincode": null,
+            "city": null,
+            "latitude": 12.9288763,
+            "locality": null,
+            "clientReferenceId": null,
+            "type": "PERMANENT",
+            "buildingName": null,
+            "street": null,
+            "tenantId": "dev",
+            "addressLine1": null,
+            "addressLine2": null,
+            "id": "4fa90d23-ac0f-4be6-ad73-b2ab2f0c0ca2",
+            "doorNo": null,
+            "landmark": null,
+            "longitude": 77.6279595
+          },
+          "rowVersion": 1,
+          "additionalFields": {
+            "schema": "Household",
+            "fields": [
+              {
+                "value": "0",
+                "key": "childrenCount"
+              },
+              {
+                "value": "0",
+                "key": "pregnantWomenCount"
+              },
+              {
+                "value": "1",
+                "key": "memberCount"
+              }
+            ],
+            "version": 1
+          },
+          "memberCount": 1,
+          "source": null,
+          "clientReferenceId": "806c7bd0-7370-11f0-9250-27cf4b722bf3",
+          "clientAuditDetails": {
+            "lastModifiedTime": 1754558747664,
+            "createdBy": "9b69e0d8-2233-4a00-9f61-329908bc153a",
+            "lastModifiedBy": "9b69e0d8-2233-4a00-9f61-329908bc153a",
+            "createdTime": 1754558747664
+          },
+          "@timestamp": "2025-08-07T09:33:36.603Z",
+          "isDeleted": false,
+          "ingestionTime": "2025-08-07T09:33:36.616550267Z",
+          "auditDetails": {
+            "lastModifiedTime": 1754559216603,
+            "createdBy": "9b69e0d8-2233-4a00-9f61-329908bc153a",
+            "lastModifiedBy": "9b69e0d8-2233-4a00-9f61-329908bc153a",
+            "createdTime": 1754559216603
+          },
+          "tenantId": "dev",
+          "id": "H-2025-08-07-009753",
+          "applicationId": null,
+          "householdType": "FAMILY"
+        }
+      },
+      {
+        "_index": "household-index-v1",
+        "_id": "H-2025-08-07-009754",
+        "_score": 1,
+        "_source": {
+          "hasErrors": false,
+          "address": {
+            "locationAccuracy": null,
+            "pincode": null,
+            "city": null,
+            "latitude": 12.9288707,
+            "locality": null,
+            "clientReferenceId": null,
+            "type": "PERMANENT",
+            "buildingName": null,
+            "street": null,
+            "tenantId": "dev",
+            "addressLine1": null,
+            "addressLine2": null,
+            "id": "0b7d3c19-a90f-4208-96f2-7fb1893b91bf",
+            "doorNo": null,
+            "landmark": null,
+            "longitude": 77.6279433
+          },
+          "rowVersion": 1,
+          "additionalFields": {
+            "schema": "Household",
+            "fields": [
+              {
+                "value": "0",
+                "key": "childrenCount"
+              },
+              {
+                "value": "0",
+                "key": "pregnantWomenCount"
+              },
+              {
+                "value": "4",
+                "key": "memberCount"
+              }
+            ],
+            "version": 1
+          },
+          "memberCount": 4,
+          "source": null,
+          "clientReferenceId": "b0fc9f90-7371-11f0-a555-752d153ea05e",
+          "clientAuditDetails": {
+            "lastModifiedTime": 1754559258636,
+            "createdBy": "9b69e0d8-2233-4a00-9f61-329908bc153a",
+            "lastModifiedBy": "9b69e0d8-2233-4a00-9f61-329908bc153a",
+            "createdTime": 1754559258636
+          },
+          "@timestamp": "2025-08-07T09:39:04.115Z",
+          "isDeleted": false,
+          "ingestionTime": "2025-08-07T09:39:04.135090019Z",
+          "auditDetails": {
+            "lastModifiedTime": 1754559544115,
+            "createdBy": "9b69e0d8-2233-4a00-9f61-329908bc153a",
+            "lastModifiedBy": "9b69e0d8-2233-4a00-9f61-329908bc153a",
+            "createdTime": 1754559544115
+          },
+          "tenantId": "dev",
+          "id": "H-2025-08-07-009754",
+          "applicationId": null,
+          "householdType": "FAMILY"
+        }
+      },
+      {
+        "_index": "household-index-v1",
+        "_id": "H-2025-08-07-009755",
+        "_score": 1,
+        "_source": {
+          "hasErrors": false,
+          "address": {
+            "locationAccuracy": null,
+            "pincode": null,
+            "city": null,
+            "latitude": -24.0508333,
+            "locality": null,
+            "clientReferenceId": null,
+            "type": "PERMANENT",
+            "buildingName": null,
+            "street": null,
+            "tenantId": "dev",
+            "addressLine1": null,
+            "addressLine2": null,
+            "id": "5901b051-7a2e-4cec-a0b1-6ab03c6a084e",
+            "doorNo": null,
+            "landmark": null,
+            "longitude": 33.3240483
+          },
+          "rowVersion": 1,
+          "additionalFields": {
+            "schema": "Household",
+            "fields": [
+              {
+                "value": "2",
+                "key": "childrenCount"
+              },
+              {
+                "value": "0",
+                "key": "pregnantWomenCount"
+              },
+              {
+                "value": "1",
+                "key": "memberCount"
+              }
+            ],
+            "version": 1
+          },
+          "memberCount": 1,
+          "source": null,
+          "clientReferenceId": "b1d28d30-7371-11f0-8051-13e483bf71be",
+          "clientAuditDetails": {
+            "lastModifiedTime": 1754559260040,
+            "createdBy": "9b69e0d8-2233-4a00-9f61-329908bc153a",
+            "lastModifiedBy": "9b69e0d8-2233-4a00-9f61-329908bc153a",
+            "createdTime": 1754559260040
+          },
+          "@timestamp": "2025-08-07T09:40:50.212Z",
+          "isDeleted": false,
+          "ingestionTime": "2025-08-07T09:40:50.231701266Z",
+          "auditDetails": {
+            "lastModifiedTime": 1754559650212,
+            "createdBy": "9b69e0d8-2233-4a00-9f61-329908bc153a",
+            "lastModifiedBy": "9b69e0d8-2233-4a00-9f61-329908bc153a",
+            "createdTime": 1754559650212
+          },
+          "tenantId": "dev",
+          "id": "H-2025-08-07-009755",
+          "applicationId": null,
+          "householdType": "FAMILY"
+        }
+      }
+    ]
+  }
+}

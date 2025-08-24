@@ -1,0 +1,55 @@
+[0;34m🚀 Starting data restoration process...[0m
+Timestamp: Sun Aug 24 12:22:40 IST 2025
+Backup directory: ./data-backup
+Elasticsearch URL: http://localhost:9200
+
+[0;34m🔍 Checking Elasticsearch connectivity...[0m
+[0;32m✅ Elasticsearch is available[0m
+[0;34m📋 Indexes to restore: project-index-v1 project-task-index-v1 household-index-v1 stock-index-v1[0m
+
+[1;33m🔄 Processing index: project-index-v1[0m
+🗑️  Deleting existing index (if exists)...
+[0;34m📁 Creating index: project-index-v1[0m
+[0;34m📊 Restoring data for index: project-index-v1[0m
+[0;34m🔍 Verifying data for index: project-index-v1[0m
+[1;33m⚠️  Could not verify document count for project-index-v1[0m
+
+[1;33m🔄 Processing index: project-task-index-v1[0m
+🗑️  Deleting existing index (if exists)...
+[0;34m📁 Creating index: project-task-index-v1[0m
+[0;34m📊 Restoring data for index: project-task-index-v1[0m
+[0;34m🔍 Verifying data for index: project-task-index-v1[0m
+[1;33m⚠️  Could not verify document count for project-task-index-v1[0m
+
+[1;33m🔄 Processing index: household-index-v1[0m
+🗑️  Deleting existing index (if exists)...
+[0;34m📁 Creating index: household-index-v1[0m
+[0;34m📊 Restoring data for index: household-index-v1[0m
+[0;34m🔍 Verifying data for index: household-index-v1[0m
+[1;33m⚠️  Could not verify document count for household-index-v1[0m
+
+[1;33m🔄 Processing index: stock-index-v1[0m
+🗑️  Deleting existing index (if exists)...
+[0;34m📁 Creating index: stock-index-v1[0m
+[0;34m📊 Restoring data for index: stock-index-v1[0m
+[0;34m🔍 Verifying data for index: stock-index-v1[0m
+[1;33m⚠️  Could not verify document count for stock-index-v1[0m
+
+[0;32m🎉 Data restoration completed![0m
+
+[0;34m📊 Final Summary:[0m
+[0;34m🔍 Verifying data for index: project-index-v1[0m
+[1;33m⚠️  Could not verify document count for project-index-v1[0m
+[0;34m🔍 Verifying data for index: project-task-index-v1[0m
+[1;33m⚠️  Could not verify document count for project-task-index-v1[0m
+[0;34m🔍 Verifying data for index: household-index-v1[0m
+[1;33m⚠️  Could not verify document count for household-index-v1[0m
+[0;34m🔍 Verifying data for index: stock-index-v1[0m
+[1;33m⚠️  Could not verify document count for stock-index-v1[0m
+
+[0;34m🔍 You can now test queries like:[0m
+  - project = project-index-v1
+  - project = project-task-index-v1 AND status = 'active'
+  - project = household-index-v1
+
+Restoration log saved to: ./data-backup/restore.log

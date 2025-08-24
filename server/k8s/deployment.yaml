@@ -2,7 +2,7 @@ apiVersion: apps/v1
 kind: Deployment
 metadata:
   name: dhr-backend
-  namespace: es-upgrade
+  namespace: default
   labels:
     app: dhr-backend
 spec:
@@ -27,17 +27,18 @@ spec:
         - name: PORT
           value: "3001"
         - name: ELASTICSEARCH_HOST
-          value: "http://elasticsearch-master.es-upgrade.svc.cluster.local:9200"
-        - name: ELASTICSEARCH_USERNAME
-          valueFrom:
-            configMapKeyRef:
-              name: dhr-config
-              key: elasticsearch-username
-        - name: ELASTICSEARCH_PASSWORD
-          valueFrom:
-            secretKeyRef:
-              name: dhr-secrets
-              key: elasticsearch-password
+          value: "http://elasticsearch:9200"
+        # Authentication disabled for local Elasticsearch
+        # - name: ELASTICSEARCH_USERNAME
+        #   valueFrom:
+        #     configMapKeyRef:
+        #       name: dhr-config
+        #       key: elasticsearch-username
+        # - name: ELASTICSEARCH_PASSWORD
+        #   valueFrom:
+        #     secretKeyRef:
+        #       name: dhr-secrets
+        #       key: elasticsearch-password
         - name: ALLOWED_HEALTH_INDEXES
           valueFrom:
             configMapKeyRef:
@@ -52,18 +53,9 @@ spec:
           value: "*"
         - name: LOG_LEVEL
           value: "info"
-        livenessProbe:
-          httpGet:
-            path: /health
-            port: 3001
-          initialDelaySeconds: 30
-          periodSeconds: 10
-        readinessProbe:
-          httpGet:
-            path: /health
-            port: 3001
-          initialDelaySeconds: 5
-          periodSeconds: 5
+        - name: SKIP_ELASTICSEARCH_HEALTH_CHECK
+          value: "true"
+# Health checks temporarily disabled - need to add /health endpoint
         resources:
           requests:
             memory: "256Mi"

@@ -1,0 +1,469 @@
+{
+  "took": 6,
+  "timed_out": false,
+  "_shards": {
+    "total": 1,
+    "successful": 1,
+    "skipped": 0,
+    "failed": 0
+  },
+  "hits": {
+    "total": {
+      "value": 10000,
+      "relation": "gte"
+    },
+    "max_score": 1,
+    "hits": [
+      {
+        "_index": "project-index-v1",
+        "_id": "fafe79c8-62e7-4e7e-8340-3d0368b361c8",
+        "_score": 1,
+        "_source": {
+          "Data": {
+            "boundaryHierarchy": {},
+            "campaignDurationInDays": 2,
+            "taskDates": [
+              "2024-12-03",
+              "2024-12-04",
+              "2024-12-05",
+              "2024-12-06"
+            ],
+            "targetPerDay": 50,
+            "endDate": 1733509799000,
+            "campaignId": "fd0e7e21-fc90-4290-a5ef-bba989d6ae53",
+            "projectType": "LLIN-mz",
+            "localityCode": "MICROPLAN_MO_03_05_04_01_INHANGOMA_SEDE",
+            "targetType": "HOUSEHOLD",
+            "projectBeneficiaryType": "HOUSEHOLD",
+            "overallTarget": 100,
+            "boundaryHierarchyCode": {},
+            "additionalDetails": {
+              "doseIndex": [
+                "01"
+              ],
+              "cycleIndex": [
+                "01"
+              ]
+            },
+            "productName": "Bednet",
+            "projectTypeId": "84e28a7b-8c6d-4505-a7ef-5d714e0361f6",
+            "@timestamp": "2024-12-03T11:27:23.915Z",
+            "productVariant": "PVAR-2024-05-09-000333",
+            "createdBy": "dfb32b6e-fb85-4152-9c93-2ff55e242480",
+            "tenantId": "mz",
+            "createdTime": 1733225243915,
+            "subProjectType": "LLIN-mz",
+            "id": "fafe79c8-62e7-4e7e-8340-3d0368b361c8",
+            "projectId": "72a258a7-ab55-4303-95ec-ee0bed3b0b08",
+            "startDate": 1733250600000
+          }
+        }
+      },
+      {
+        "_index": "project-index-v1",
+        "_id": "7d477e4a-836b-4441-94f0-b610c53a7044",
+        "_score": 1,
+        "_source": {
+          "Data": {
+            "boundaryHierarchy": {},
+            "campaignDurationInDays": 2,
+            "taskDates": [
+              "2024-12-03",
+              "2024-12-04",
+              "2024-12-05",
+              "2024-12-06"
+            ],
+            "targetPerDay": 50,
+            "endDate": 1733509799000,
+            "campaignId": "fd0e7e21-fc90-4290-a5ef-bba989d6ae53",
+            "projectType": "LLIN-mz",
+            "localityCode": "MICROPLAN_MO_03_06_01_01_SENA_SEDE",
+            "targetType": "HOUSEHOLD",
+            "projectBeneficiaryType": "HOUSEHOLD",
+            "overallTarget": 100,
+            "boundaryHierarchyCode": {},
+            "additionalDetails": {
+              "doseIndex": [
+                "01"
+              ],
+              "cycleIndex": [
+                "01"
+              ]
+            },
+            "productName": "Bednet",
+            "projectTypeId": "84e28a7b-8c6d-4505-a7ef-5d714e0361f6",
+            "@timestamp": "2024-12-03T11:27:23.756Z",
+            "productVariant": "PVAR-2024-05-09-000333",
+            "createdBy": "dfb32b6e-fb85-4152-9c93-2ff55e242480",
+            "tenantId": "mz",
+            "createdTime": 1733225243756,
+            "subProjectType": "LLIN-mz",
+            "id": "7d477e4a-836b-4441-94f0-b610c53a7044",
+            "projectId": "faaf045a-dcca-4b06-b193-4ebe7aafa1b7",
+            "startDate": 1733250600000
+          }
+        }
+      },
+      {
+        "_index": "project-index-v1",
+        "_id": "ee123711-3d22-4b31-b03b-d772329021da",
+        "_score": 1,
+        "_source": {
+          "Data": {
+            "boundaryHierarchy": {},
+            "campaignDurationInDays": 2,
+            "taskDates": [
+              "2024-12-03",
+              "2024-12-04",
+              "2024-12-05",
+              "2024-12-06"
+            ],
+            "targetPerDay": 50,
+            "endDate": 1733509799000,
+            "campaignId": "fd0e7e21-fc90-4290-a5ef-bba989d6ae53",
+            "projectType": "LLIN-mz",
+            "localityCode": "MICROPLAN_MO_03_06_02_01_MURRA_A_SEDE",
+            "targetType": "HOUSEHOLD",
+            "projectBeneficiaryType": "HOUSEHOLD",
+            "overallTarget": 100,
+            "boundaryHierarchyCode": {},
+            "additionalDetails": {
+              "doseIndex": [
+                "01"
+              ],
+              "cycleIndex": [
+                "01"
+              ]
+            },
+            "productName": "Bednet",
+            "projectTypeId": "84e28a7b-8c6d-4505-a7ef-5d714e0361f6",
+            "@timestamp": "2024-12-03T11:27:23.645Z",
+            "productVariant": "PVAR-2024-05-09-000333",
+            "createdBy": "dfb32b6e-fb85-4152-9c93-2ff55e242480",
+            "tenantId": "mz",
+            "createdTime": 1733225243645,
+            "subProjectType": "LLIN-mz",
+            "id": "ee123711-3d22-4b31-b03b-d772329021da",
+            "projectId": "090e27ac-fbc5-43b4-be3b-4d332d359a8a",
+            "startDate": 1733250600000
+          }
+        }
+      },
+      {
+        "_index": "project-index-v1",
+        "_id": "5ab718b1-4eca-46c2-ad91-45f65e961558",
+        "_score": 1,
+        "_source": {
+          "Data": {
+            "boundaryHierarchy": {},
+            "campaignDurationInDays": 2,
+            "taskDates": [
+              "2024-12-03",
+              "2024-12-04",
+              "2024-12-05",
+              "2024-12-06"
+            ],
+            "targetPerDay": 56,
+            "endDate": 1733509799000,
+            "campaignId": "fd0e7e21-fc90-4290-a5ef-bba989d6ae53",
+            "projectType": "LLIN-mz",
+            "localityCode": "MICROPLAN_MO_03_02_01_01_SAVANE_SEDE",
+            "targetType": "HOUSEHOLD",
+            "projectBeneficiaryType": "HOUSEHOLD",
+            "overallTarget": 113,
+            "boundaryHierarchyCode": {},
+            "additionalDetails": {
+              "doseIndex": [
+                "01"
+              ],
+              "cycleIndex": [
+                "01"
+              ]
+            },
+            "productName": "Bednet",
+            "projectTypeId": "84e28a7b-8c6d-4505-a7ef-5d714e0361f6",
+            "@timestamp": "2024-12-03T11:27:26.261Z",
+            "productVariant": "PVAR-2024-05-09-000333",
+            "createdBy": "dfb32b6e-fb85-4152-9c93-2ff55e242480",
+            "tenantId": "mz",
+            "createdTime": 1733225246261,
+            "subProjectType": "LLIN-mz",
+            "id": "5ab718b1-4eca-46c2-ad91-45f65e961558",
+            "projectId": "b65bab9d-5479-4266-ac00-27c5871f0d77",
+            "startDate": 1733250600000
+          }
+        }
+      },
+      {
+        "_index": "project-index-v1",
+        "_id": "51c73167-db33-45d3-9f90-3199389f1dcd",
+        "_score": 1,
+        "_source": {
+          "Data": {
+            "boundaryHierarchy": {},
+            "campaignDurationInDays": 2,
+            "taskDates": [
+              "2024-12-03",
+              "2024-12-04",
+              "2024-12-05",
+              "2024-12-06"
+            ],
+            "targetPerDay": 54,
+            "endDate": 1733509799000,
+            "campaignId": "fd0e7e21-fc90-4290-a5ef-bba989d6ae53",
+            "projectType": "LLIN-mz",
+            "localityCode": "MICROPLAN_MO_03_02_02_01_MAFAMBISSE_SEDE",
+            "targetType": "HOUSEHOLD",
+            "projectBeneficiaryType": "HOUSEHOLD",
+            "overallTarget": 109,
+            "boundaryHierarchyCode": {},
+            "additionalDetails": {
+              "doseIndex": [
+                "01"
+              ],
+              "cycleIndex": [
+                "01"
+              ]
+            },
+            "productName": "Bednet",
+            "projectTypeId": "84e28a7b-8c6d-4505-a7ef-5d714e0361f6",
+            "@timestamp": "2024-12-03T11:27:26.141Z",
+            "productVariant": "PVAR-2024-05-09-000333",
+            "createdBy": "dfb32b6e-fb85-4152-9c93-2ff55e242480",
+            "tenantId": "mz",
+            "createdTime": 1733225246141,
+            "subProjectType": "LLIN-mz",
+            "id": "51c73167-db33-45d3-9f90-3199389f1dcd",
+            "projectId": "7f3cb47e-4314-445a-959d-162c052cab99",
+            "startDate": 1733250600000
+          }
+        }
+      },
+      {
+        "_index": "project-index-v1",
+        "_id": "30a264f6-39ae-4042-8685-8fe02914d0e1",
+        "_score": 1,
+        "_source": {
+          "Data": {
+            "boundaryHierarchy": {},
+            "campaignDurationInDays": 2,
+            "taskDates": [
+              "2024-12-03",
+              "2024-12-04",
+              "2024-12-05",
+              "2024-12-06"
+            ],
+            "targetPerDay": 52,
+            "endDate": 1733509799000,
+            "campaignId": "fd0e7e21-fc90-4290-a5ef-bba989d6ae53",
+            "projectType": "LLIN-mz",
+            "localityCode": "MICROPLAN_MO_03_02_03_01_CHINAMACONDO_SEDE",
+            "targetType": "HOUSEHOLD",
+            "projectBeneficiaryType": "HOUSEHOLD",
+            "overallTarget": 105,
+            "boundaryHierarchyCode": {},
+            "additionalDetails": {
+              "doseIndex": [
+                "01"
+              ],
+              "cycleIndex": [
+                "01"
+              ]
+            },
+            "productName": "Bednet",
+            "projectTypeId": "84e28a7b-8c6d-4505-a7ef-5d714e0361f6",
+            "@timestamp": "2024-12-03T11:27:26.028Z",
+            "productVariant": "PVAR-2024-05-09-000333",
+            "createdBy": "dfb32b6e-fb85-4152-9c93-2ff55e242480",
+            "tenantId": "mz",
+            "createdTime": 1733225246028,
+            "subProjectType": "LLIN-mz",
+            "id": "30a264f6-39ae-4042-8685-8fe02914d0e1",
+            "projectId": "53d074cf-03a0-4176-839d-2f945be3c403",
+            "startDate": 1733250600000
+          }
+        }
+      },
+      {
+        "_index": "project-index-v1",
+        "_id": "653fcbec-20dc-45fe-bcfb-df437ede5aee",
+        "_score": 1,
+        "_source": {
+          "Data": {
+            "boundaryHierarchy": {},
+            "campaignDurationInDays": 2,
+            "taskDates": [
+              "2024-12-03",
+              "2024-12-04",
+              "2024-12-05",
+              "2024-12-06"
+            ],
+            "targetPerDay": 50,
+            "endDate": 1733509799000,
+            "campaignId": "fd0e7e21-fc90-4290-a5ef-bba989d6ae53",
+            "projectType": "LLIN-mz",
+            "localityCode": "MICROPLAN_MO_03_02_04_01_SENGO_SEDE",
+            "targetType": "HOUSEHOLD",
+            "projectBeneficiaryType": "HOUSEHOLD",
+            "overallTarget": 101,
+            "boundaryHierarchyCode": {},
+            "additionalDetails": {
+              "doseIndex": [
+                "01"
+              ],
+              "cycleIndex": [
+                "01"
+              ]
+            },
+            "productName": "Bednet",
+            "projectTypeId": "84e28a7b-8c6d-4505-a7ef-5d714e0361f6",
+            "@timestamp": "2024-12-03T11:27:25.917Z",
+            "productVariant": "PVAR-2024-05-09-000333",
+            "createdBy": "dfb32b6e-fb85-4152-9c93-2ff55e242480",
+            "tenantId": "mz",
+            "createdTime": 1733225245917,
+            "subProjectType": "LLIN-mz",
+            "id": "653fcbec-20dc-45fe-bcfb-df437ede5aee",
+            "projectId": "bf4216f2-b0b2-448f-ae9b-0470671a1998",
+            "startDate": 1733250600000
+          }
+        }
+      },
+      {
+        "_index": "project-index-v1",
+        "_id": "131b40fc-ddf2-4165-afc0-b0a2fdb8962b",
+        "_score": 1,
+        "_source": {
+          "Data": {
+            "boundaryHierarchy": {},
+            "campaignDurationInDays": 2,
+            "taskDates": [
+              "2024-12-03",
+              "2024-12-04",
+              "2024-12-05",
+              "2024-12-06"
+            ],
+            "targetPerDay": 56,
+            "endDate": 1733509799000,
+            "campaignId": "fd0e7e21-fc90-4290-a5ef-bba989d6ae53",
+            "projectType": "LLIN-mz",
+            "localityCode": "MICROPLAN_MO_03_03_01_01_VUNDUZI_SEDE",
+            "targetType": "HOUSEHOLD",
+            "projectBeneficiaryType": "HOUSEHOLD",
+            "overallTarget": 113,
+            "boundaryHierarchyCode": {},
+            "additionalDetails": {
+              "doseIndex": [
+                "01"
+              ],
+              "cycleIndex": [
+                "01"
+              ]
+            },
+            "productName": "Bednet",
+            "projectTypeId": "84e28a7b-8c6d-4505-a7ef-5d714e0361f6",
+            "@timestamp": "2024-12-03T11:27:25.723Z",
+            "productVariant": "PVAR-2024-05-09-000333",
+            "createdBy": "dfb32b6e-fb85-4152-9c93-2ff55e242480",
+            "tenantId": "mz",
+            "createdTime": 1733225245723,
+            "subProjectType": "LLIN-mz",
+            "id": "131b40fc-ddf2-4165-afc0-b0a2fdb8962b",
+            "projectId": "9c11d572-5b84-47a5-bb72-13771d11666d",
+            "startDate": 1733250600000
+          }
+        }
+      },
+      {
+        "_index": "project-index-v1",
+        "_id": "5264923d-e0f5-498e-9c09-dce41d581f46",
+        "_score": 1,
+        "_source": {
+          "Data": {
+            "boundaryHierarchy": {},
+            "campaignDurationInDays": 2,
+            "taskDates": [
+              "2024-12-03",
+              "2024-12-04",
+              "2024-12-05",
+              "2024-12-06"
+            ],
+            "targetPerDay": 54,
+            "endDate": 1733509799000,
+            "campaignId": "fd0e7e21-fc90-4290-a5ef-bba989d6ae53",
+            "projectType": "LLIN-mz",
+            "localityCode": "MICROPLAN_MO_03_03_02_01_CHITUNGA_SEDE",
+            "targetType": "HOUSEHOLD",
+            "projectBeneficiaryType": "HOUSEHOLD",
+            "overallTarget": 109,
+            "boundaryHierarchyCode": {},
+            "additionalDetails": {
+              "doseIndex": [
+                "01"
+              ],
+              "cycleIndex": [
+                "01"
+              ]
+            },
+            "productName": "Bednet",
+            "projectTypeId": "84e28a7b-8c6d-4505-a7ef-5d714e0361f6",
+            "@timestamp": "2024-12-03T11:27:25.425Z",
+            "productVariant": "PVAR-2024-05-09-000333",
+            "createdBy": "dfb32b6e-fb85-4152-9c93-2ff55e242480",
+            "tenantId": "mz",
+            "createdTime": 1733225245425,
+            "subProjectType": "LLIN-mz",
+            "id": "5264923d-e0f5-498e-9c09-dce41d581f46",
+            "projectId": "ea9c972b-47a0-4da0-9efa-27b54d403d9a",
+            "startDate": 1733250600000
+          }
+        }
+      },
+      {
+        "_index": "project-index-v1",
+        "_id": "282acd8d-5a82-484c-b6e5-1817bf93d6d0",
+        "_score": 1,
+        "_source": {
+          "Data": {
+            "boundaryHierarchy": {},
+            "campaignDurationInDays": 2,
+            "taskDates": [
+              "2024-12-03",
+              "2024-12-04",
+              "2024-12-05",
+              "2024-12-06"
+            ],
+            "targetPerDay": 1526,
+            "endDate": 1733509799000,
+            "campaignId": "fd0e7e21-fc90-4290-a5ef-bba989d6ae53",
+            "projectType": "LLIN-mz",
+            "localityCode": "MICROPLAN_MO_02_01_01_01_PEMBA_SEDE",
+            "targetType": "HOUSEHOLD",
+            "projectBeneficiaryType": "HOUSEHOLD",
+            "overallTarget": 3053,
+            "boundaryHierarchyCode": {},
+            "additionalDetails": {
+              "doseIndex": [
+                "01"
+              ],
+              "cycleIndex": [
+                "01"
+              ]
+            },
+            "productName": "Bednet",
+            "projectTypeId": "84e28a7b-8c6d-4505-a7ef-5d714e0361f6",
+            "@timestamp": "2024-12-03T11:27:27.143Z",
+            "productVariant": "PVAR-2024-05-09-000333",
+            "createdBy": "dfb32b6e-fb85-4152-9c93-2ff55e242480",
+            "tenantId": "mz",
+            "createdTime": 1733225247143,
+            "subProjectType": "LLIN-mz",
+            "id": "282acd8d-5a82-484c-b6e5-1817bf93d6d0",
+            "projectId": "b201d114-f5c8-4799-a70c-4bb6058a2240",
+            "startDate": 1733250600000
+          }
+        }
+      }
+    ]
+  }
+}

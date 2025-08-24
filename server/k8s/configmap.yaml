@@ -2,7 +2,7 @@ apiVersion: v1
 kind: ConfigMap
 metadata:
   name: dhr-config
-  namespace: es-upgrade
+  namespace: default
 data:
   elasticsearch-username: "elastic"
   allowed-health-indexes: "project-index-v1,project-task-index-v1,household-index-v1"

@@ -2,7 +2,7 @@ apiVersion: v1
 kind: Service
 metadata:
   name: dhr-backend
-  namespace: es-upgrade
+  namespace: default
   labels:
     app: dhr-backend
 spec:
@@ -19,7 +19,7 @@ apiVersion: v1
 kind: Service
 metadata:
   name: dhr-backend-nodeport
-  namespace: es-upgrade
+  namespace: default
   labels:
     app: dhr-backend
 spec:

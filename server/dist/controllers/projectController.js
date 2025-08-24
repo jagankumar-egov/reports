@@ -8,25 +8,22 @@ class ProjectController {
         const { search, limit = 20 } = req.query;
         try {
             const allowedIndexes = elasticsearch_1.elasticsearchService.getAllowedIndexes();
-            const projects = [];
             const stats = await elasticsearch_1.elasticsearchService.getIndicesStats();
-            for (const indexPattern of allowedIndexes) {
-                const indexNames = indexPattern.endsWith('*')
-                    ? this.getMatchingIndexes(stats, indexPattern)
-                    : [indexPattern];
-                for (const indexName of indexNames) {
-                    if (stats.indices?.[indexName]) {
-                        const indexStats = stats.indices[indexName];
-                        const project = {
-                            id: indexName,
-                            key: this.generateProjectKey(indexName),
-                            name: this.generateProjectName(indexName),
-                            description: `Health data index: ${indexName}`,
-                            indexName,
-                            fieldCount: await this.getFieldCount(indexName),
-                            recordCount: indexStats.total?.docs?.count || 0,
-                        };
-                        projects.push(project);
+            const projects = [];
+            for (const allowedIndex of allowedIndexes) {
+                if (allowedIndex.endsWith('*')) {
+                    const matchingIndexes = this.getMatchingIndexes(stats, allowedIndex);
+                    for (const indexName of matchingIndexes) {
+                        const indexStats = stats.indices?.[indexName];
+                        if (indexStats) {
+                            projects.push(await this.createProjectFromIndex(indexName, indexStats));
+                        }
+                    }
+                }
+                else {
+                    const indexStats = stats.indices?.[allowedIndex];
+                    if (indexStats) {
+                        projects.push(await this.createProjectFromIndex(allowedIndex, indexStats));
                     }
                 }
             }
@@ -95,6 +92,17 @@ class ProjectController {
             throw error;
         }
     }
+    async createProjectFromIndex(indexName, indexStats) {
+        return {
+            id: indexName,
+            key: this.generateProjectKey(indexName),
+            name: this.generateProjectName(indexName),
+            description: `Health data index: ${indexName}`,
+            indexName: indexName,
+            fieldCount: await this.getFieldCount(indexName),
+            recordCount: indexStats.total?.docs?.count || 0,
+        };
+    }
     getMatchingIndexes(stats, pattern) {
         const prefix = pattern.slice(0, -1);
         return Object.keys(stats.indices || {}).filter(indexName => indexName.startsWith(prefix));
@@ -126,7 +134,7 @@ class ProjectController {
         if (depth >= maxDepth)
             return 0;
         let count = 0;
-        for (const [fieldName, fieldConfig] of Object.entries(properties)) {
+        for (const [, fieldConfig] of Object.entries(properties)) {
             count++;
             const config = fieldConfig;
             if (config.properties) {

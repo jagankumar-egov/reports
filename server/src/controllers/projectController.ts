@@ -9,32 +9,28 @@ export class ProjectController {
 
     try {
       const allowedIndexes = elasticsearchService.getAllowedIndexes();
-      const projects: Project[] = [];
-
+      
       // Get stats for all allowed indexes
       const stats = await elasticsearchService.getIndicesStats();
-
-      for (const indexPattern of allowedIndexes) {
-        // Handle wildcard patterns
-        const indexNames = indexPattern.endsWith('*') 
-          ? this.getMatchingIndexes(stats, indexPattern)
-          : [indexPattern];
-
-        for (const indexName of indexNames) {
-          if (stats.indices?.[indexName]) {
-            const indexStats = stats.indices[indexName];
-            
-            const project: Project = {
-              id: indexName,
-              key: this.generateProjectKey(indexName),
-              name: this.generateProjectName(indexName),
-              description: `Health data index: ${indexName}`,
-              indexName,
-              fieldCount: await this.getFieldCount(indexName),
-              recordCount: indexStats.total?.docs?.count || 0,
-            };
-
-            projects.push(project);
+      
+      // Build projects from Elasticsearch indexes
+      const projects: Project[] = [];
+      
+      for (const allowedIndex of allowedIndexes) {
+        if (allowedIndex.endsWith('*')) {
+          // Handle wildcard indexes
+          const matchingIndexes = this.getMatchingIndexes(stats, allowedIndex);
+          for (const indexName of matchingIndexes) {
+            const indexStats = stats.indices?.[indexName];
+            if (indexStats) {
+              projects.push(await this.createProjectFromIndex(indexName, indexStats));
+            }
+          }
+        } else {
+          // Handle exact index matches
+          const indexStats = stats.indices?.[allowedIndex];
+          if (indexStats) {
+            projects.push(await this.createProjectFromIndex(allowedIndex, indexStats));
           }
         }
       }
@@ -125,6 +121,18 @@ export class ProjectController {
     }
   }
 
+  private async createProjectFromIndex(indexName: string, indexStats: any): Promise<Project> {
+    return {
+      id: indexName,
+      key: this.generateProjectKey(indexName),
+      name: this.generateProjectName(indexName),
+      description: `Health data index: ${indexName}`,
+      indexName: indexName,
+      fieldCount: await this.getFieldCount(indexName),
+      recordCount: indexStats.total?.docs?.count || 0,
+    };
+  }
+
   private getMatchingIndexes(stats: any, pattern: string): string[] {
     const prefix = pattern.slice(0, -1); // Remove the '*'
     return Object.keys(stats.indices || {}).filter(indexName =>
@@ -166,7 +174,7 @@ export class ProjectController {
     if (depth >= maxDepth) return 0;
     
     let count = 0;
-    for (const [fieldName, fieldConfig] of Object.entries(properties)) {
+    for (const [, fieldConfig] of Object.entries(properties)) {
       count++; // Count the field itself
       
       const config: any = fieldConfig;

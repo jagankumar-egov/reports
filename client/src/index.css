@@ -1,0 +1,120 @@
+/* DHR Frontend Global Styles */
+
+* {
+  box-sizing: border-box;
+}
+
+html, body, #root {
+  height: 100%;
+  margin: 0;
+  padding: 0;
+}
+
+body {
+  font-family: 'Roboto', 'Helvetica', 'Arial', sans-serif;
+  -webkit-font-smoothing: antialiased;
+  -moz-osx-font-smoothing: grayscale;
+}
+
+code {
+  font-family: 'Monaco', 'Menlo', 'Ubuntu Mono', 'Consolas', monospace;
+}
+
+/* Custom scrollbar styles */
+::-webkit-scrollbar {
+  width: 8px;
+  height: 8px;
+}
+
+::-webkit-scrollbar-track {
+  background: #f1f1f1;
+}
+
+::-webkit-scrollbar-thumb {
+  background: #c1c1c1;
+  border-radius: 4px;
+}
+
+::-webkit-scrollbar-thumb:hover {
+  background: #a1a1a1;
+}
+
+/* Loading animations */
+@keyframes spin {
+  0% { transform: rotate(0deg); }
+  100% { transform: rotate(360deg); }
+}
+
+.animate-spin {
+  animation: spin 1s linear infinite;
+}
+
+/* Utility classes */
+.full-height {
+  height: 100vh;
+}
+
+.flex-center {
+  display: flex;
+  justify-content: center;
+  align-items: center;
+}
+
+.text-ellipsis {
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+/* Monaco Editor overrides */
+.monaco-editor {
+  border-radius: 4px !important;
+}
+
+/* Data Grid customizations */
+.MuiDataGrid-root {
+  border: none !important;
+}
+
+.MuiDataGrid-cell {
+  border-bottom: 1px solid rgba(224, 224, 224, 1) !important;
+}
+
+.MuiDataGrid-columnHeaders {
+  background-color: #fafafa !important;
+  border-bottom: 1px solid rgba(224, 224, 224, 1) !important;
+}
+
+/* Custom data grid toolbar */
+.dhr-data-grid-toolbar {
+  padding: 16px;
+  border-bottom: 1px solid rgba(224, 224, 224, 1);
+  background-color: #fafafa;
+}
+
+/* Query builder styles */
+.jql-editor-container {
+  border: 1px solid rgba(0, 0, 0, 0.23);
+  border-radius: 4px;
+  transition: border-color 0.2s;
+}
+
+.jql-editor-container:hover {
+  border-color: rgba(0, 0, 0, 0.87);
+}
+
+.jql-editor-container.focused {
+  border-color: #1976d2;
+  border-width: 2px;
+}
+
+.jql-editor-container.error {
+  border-color: #d32f2f;
+}
+
+/* Responsive design helpers */
+@media (max-width: 768px) {
+  .hide-on-mobile {
+    display: none !important;
+  }
+}
