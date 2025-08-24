@@ -5,6 +5,7 @@ on:
     branches:
       - main
       - develop
+      - new-design
       - 'feature/**'
       - 'release/**'
     tags:
