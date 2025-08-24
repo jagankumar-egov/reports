@@ -12,9 +12,6 @@ import { validateRequest } from './middleware/validation';
 import { elasticsearchService } from './services/elasticsearch';
 
 // Routes
-import queryRoutes from './routes/query';
-import fieldsRoutes from './routes/fields';
-import projectsRoutes from './routes/projects';
 import directQueryRoutes from './routes/direct-query';
 
 // Load environment variables
@@ -59,14 +56,11 @@ app.get('/health', (req, res) => {
     timestamp: new Date().toISOString(),
     service: 'dhr-backend',
     version: '1.0.0',
-    phase: 'Phase 1 - Query & Data Tables'
+    phase: 'Phase 1 - Direct Elasticsearch Query'
   });
 });
 
 // API Routes
-app.use('/api/query', queryRoutes);
-app.use('/api/fields', fieldsRoutes);
-app.use('/api/projects', projectsRoutes);
 app.use('/api/direct-query', directQueryRoutes);
 
 // Error handling

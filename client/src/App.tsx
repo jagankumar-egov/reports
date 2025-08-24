@@ -5,8 +5,6 @@ import { useSnackbar } from 'notistack';
 
 import { useAppSelector, useAppDispatch } from '@/store';
 import { removeNotification } from '@/store/slices/uiSlice';
-import { loadProjects } from '@/store/slices/projectsSlice';
-import { loadFields } from '@/store/slices/fieldsSlice';
 
 // Layout components
 import AppBar from '@/components/layout/AppBar';
@@ -14,7 +12,6 @@ import Sidebar from '@/components/layout/Sidebar';
 import ErrorBoundary from '@/components/common/ErrorBoundary';
 
 // Page components
-import QueryPage from '@/pages/QueryPage';
 import DirectQueryPage from '@/pages/DirectQueryPage';
 import LoadingSpinner from '@/components/common/LoadingSpinner';
 
@@ -24,12 +21,7 @@ const App: React.FC = () => {
   
   const { sidebarOpen, notifications, loading } = useAppSelector((state) => state.ui);
 
-  // Initialize data on app start
-  useEffect(() => {
-    // Load initial data
-    dispatch(loadProjects());
-    dispatch(loadFields());
-  }, [dispatch]);
+  // Phase 1: No initial data loading needed for direct query
 
   // Handle notifications
   useEffect(() => {
@@ -96,15 +88,14 @@ const App: React.FC = () => {
           }}
         >
           <Routes>
-            {/* Default route - redirect to query */}
-            <Route path="/" element={<Navigate to="/query" replace />} />
+            {/* Default route - redirect to direct query */}
+            <Route path="/" element={<Navigate to="/direct-query" replace />} />
             
-            {/* Phase 1: Query and Data Tables */}
-            <Route path="/query" element={<QueryPage />} />
+            {/* Phase 1: Direct Elasticsearch Query */}
             <Route path="/direct-query" element={<DirectQueryPage />} />
             
             {/* Catch-all route */}
-            <Route path="*" element={<Navigate to="/query" replace />} />
+            <Route path="*" element={<Navigate to="/direct-query" replace />} />
           </Routes>
         </Box>
       </Box>

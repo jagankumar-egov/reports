@@ -1,17 +1,11 @@
 import { configureStore } from '@reduxjs/toolkit';
 import { useDispatch, TypedUseSelectorHook, useSelector } from 'react-redux';
 
-import queryReducer from './slices/querySlice';
 import uiReducer from './slices/uiSlice';
-import fieldsReducer from './slices/fieldsSlice';
-import projectsReducer from './slices/projectsSlice';
 
 export const store = configureStore({
   reducer: {
-    query: queryReducer,
     ui: uiReducer,
-    fields: fieldsReducer,
-    projects: projectsReducer,
   },
   middleware: (getDefaultMiddleware) =>
     getDefaultMiddleware({

@@ -1,72 +1,4 @@
-// DHR Backend Types - Phase 1
-
-export interface QueryRequest {
-  jql: string;
-  startAt?: number;
-  maxResults?: number;
-  fields?: string[];
-  allowedIndexes?: string[];
-}
-
-export interface QueryResult {
-  total: number;
-  startAt: number;
-  maxResults: number;
-  issues: HealthRecord[];
-  fields: FieldDefinition[];
-  executionTime: number;
-}
-
-export interface HealthRecord {
-  id: string;
-  index: string;
-  source: Record<string, any>;
-  score?: number;
-  fields?: Record<string, any>;
-}
-
-export interface FieldDefinition {
-  id: string;
-  name: string;
-  type: string;
-  searchable: boolean;
-  aggregatable: boolean;
-  description?: string;
-  schema?: {
-    type: string;
-    format?: string;
-    enum?: string[];
-  };
-}
-
-export interface Project {
-  id: string;
-  key: string;
-  name: string;
-  description?: string;
-  indexName: string;
-  fieldCount: number;
-  recordCount: number;
-}
-
-export interface JQLQuery {
-  projects?: string[];
-  conditions?: QueryCondition[];
-  orderBy?: OrderByClause[];
-  limit?: number;
-}
-
-export interface QueryCondition {
-  field: string;
-  operator: 'equals' | 'not_equals' | 'contains' | 'not_contains' | 'in' | 'not_in' | 'greater_than' | 'less_than' | 'between' | 'is_null' | 'is_not_null';
-  value: any;
-  values?: any[];
-}
-
-export interface OrderByClause {
-  field: string;
-  direction: 'asc' | 'desc';
-}
+// DHR Backend Types - Phase 1: Direct Elasticsearch Query
 
 export interface ElasticsearchConfig {
   host: string;
@@ -74,7 +6,6 @@ export interface ElasticsearchConfig {
   password: string;
   caCert?: string;
   allowedIndexes: string[];
-  projectIndexMapping: Record<string, string>;
   requestTimeout: number;
   maxRetries: number;
 }
@@ -98,23 +29,6 @@ export interface ValidationError {
   field: string;
   message: string;
   value?: any;
-}
-
-// Express Request Extensions
-export interface AuthenticatedRequest extends Express.Request {
-  user?: {
-    id: string;
-    email: string;
-    roles: string[];
-    tenantId: string;
-  };
-}
-
-export interface QueryValidationResult {
-  isValid: boolean;
-  errors: ValidationError[];
-  warnings: string[];
-  estimatedResults?: number;
 }
 
 export interface ElasticsearchResponse {

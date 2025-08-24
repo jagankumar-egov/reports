@@ -14,24 +14,12 @@ class ElasticsearchService {
   async initialize(): Promise<void> {
     try {
       // Load config from environment variables
-      const projectIndexMapping: Record<string, string> = {};
-      if (process.env.PROJECT_INDEX_MAPPING) {
-        const mappingPairs = process.env.PROJECT_INDEX_MAPPING.split(',');
-        for (const pair of mappingPairs) {
-          const [project, index] = pair.trim().split(':');
-          if (project && index) {
-            projectIndexMapping[project.toLowerCase()] = index;
-          }
-        }
-      }
-
       this.config = {
         host: process.env.ELASTICSEARCH_HOST!,
         username: process.env.ELASTICSEARCH_USERNAME!,
         password: process.env.ELASTICSEARCH_PASSWORD!,
         caCert: process.env.ELASTICSEARCH_CA_CERT,
         allowedIndexes: process.env.ALLOWED_HEALTH_INDEXES?.split(',') || [],
-        projectIndexMapping: projectIndexMapping,
         requestTimeout: 30000,
         maxRetries: 3,
       };
@@ -322,10 +310,6 @@ class ElasticsearchService {
 
   getAllowedIndexes(): string[] {
     return [...this.config.allowedIndexes];
-  }
-
-  getProjectIndexMapping(): Record<string, string> {
-    return { ...this.config.projectIndexMapping };
   }
 
   async executeDirectQuery(params: {

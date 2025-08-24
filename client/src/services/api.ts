@@ -1,12 +1,6 @@
 import axios, { AxiosInstance, AxiosResponse } from 'axios';
 import { 
   ApiResponse, 
-  QueryRequest, 
-  QueryResult, 
-  QueryValidationResult,
-  FieldDefinition,
-  Project,
-  QueryHistoryItem,
   DirectQueryRequest,
   DirectQueryResponse
 } from '@/types';
@@ -73,64 +67,6 @@ class ApiService {
     return `req_${Date.now()}_${Math.random().toString(36).substr(2, 9)}`;
   }
 
-  // Query API
-  async executeQuery(request: QueryRequest): Promise<QueryResult> {
-    const response = await this.client.post<ApiResponse<QueryResult>>('/query/execute', request);
-    if (!response.data.success || !response.data.data) {
-      throw new Error(response.data.error?.message || 'Query execution failed');
-    }
-    return response.data.data;
-  }
-
-  async validateQuery(jql: string): Promise<QueryValidationResult> {
-    const response = await this.client.post<ApiResponse<QueryValidationResult>>('/query/validate', { jql });
-    if (!response.data.success || !response.data.data) {
-      throw new Error(response.data.error?.message || 'Query validation failed');
-    }
-    return response.data.data;
-  }
-
-  async getQueryHistory(): Promise<QueryHistoryItem[]> {
-    const response = await this.client.get<ApiResponse<{ history: QueryHistoryItem[] }>>('/query/history');
-    if (!response.data.success || !response.data.data) {
-      throw new Error(response.data.error?.message || 'Failed to get query history');
-    }
-    return response.data.data.history;
-  }
-
-  // Fields API
-  async getFields(params?: { index?: string; search?: string; type?: string }): Promise<FieldDefinition[]> {
-    const response = await this.client.get<ApiResponse<FieldDefinition[]>>('/fields', { params });
-    if (!response.data.success || !response.data.data) {
-      throw new Error(response.data.error?.message || 'Failed to get fields');
-    }
-    return response.data.data;
-  }
-
-  async getFieldsForIndex(index: string): Promise<FieldDefinition[]> {
-    const response = await this.client.get<ApiResponse<FieldDefinition[]>>(`/fields/${index}`);
-    if (!response.data.success || !response.data.data) {
-      throw new Error(response.data.error?.message || `Failed to get fields for index ${index}`);
-    }
-    return response.data.data;
-  }
-
-  // Projects API
-  async getProjects(params?: { search?: string; limit?: number }): Promise<Project[]> {
-    const response = await this.client.get<ApiResponse<Project[]>>('/projects', { params });
-    if (!response.data.success || !response.data.data) {
-      throw new Error(response.data.error?.message || 'Failed to get projects');
-    }
-    return response.data.data;
-  }
-
-  async getProject(id: string): Promise<Project> {
-    const response = await this.client.get<ApiResponse<Project>>(`/projects/${id}`);
-    if (!response.data.success || !response.data.data) {
-      throw new Error(response.data.error?.message || `Failed to get project ${id}`);
-    }
-    return response.data.data;
-  }
 
   // Direct Query API
   async executeDirectQuery(request: DirectQueryRequest): Promise<DirectQueryResponse> {
@@ -159,23 +95,7 @@ class ApiService {
 // Create and export singleton instance
 export const apiService = new ApiService();
 
-// Export individual API modules for cleaner imports
-export const queryAPI = {
-  execute: (request: QueryRequest) => apiService.executeQuery(request),
-  validate: (jql: string) => apiService.validateQuery(jql),
-  getHistory: () => apiService.getQueryHistory(),
-};
-
-export const fieldsAPI = {
-  getAll: (params?: { index?: string; search?: string; type?: string }) => apiService.getFields(params),
-  getForIndex: (index: string) => apiService.getFieldsForIndex(index),
-};
-
-export const projectsAPI = {
-  getAll: (params?: { search?: string; limit?: number }) => apiService.getProjects(params),
-  getById: (id: string) => apiService.getProject(id),
-};
-
+// Export API for Phase 1: Direct Query
 export const directQueryAPI = {
   execute: (request: DirectQueryRequest) => apiService.executeDirectQuery(request),
   getIndexes: () => apiService.getAvailableIndexes(),

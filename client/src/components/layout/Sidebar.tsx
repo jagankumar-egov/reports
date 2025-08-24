@@ -38,14 +38,6 @@ interface NavItem {
 
 const navItems: NavItem[] = [
   {
-    id: 'query',
-    label: 'Query & Search',
-    icon: <SearchIcon />,
-    path: '/query',
-    available: true,
-    phase: 1,
-  },
-  {
     id: 'direct-query',
     label: 'Direct ES Query',
     icon: <CodeIcon />,
@@ -134,7 +126,7 @@ const Sidebar: React.FC<SidebarProps> = ({ open }) => {
           Navigation
         </Typography>
         <Typography variant="caption" color="text.secondary">
-          Phase 1: Query & Data Tables Active
+          Phase 1: Direct Elasticsearch Query
         </Typography>
       </Box>
       
@@ -210,21 +202,6 @@ const Sidebar: React.FC<SidebarProps> = ({ open }) => {
         <List dense>
           <ListItem disablePadding>
             <ListItemButton
-              onClick={() => navigate('/query')}
-              size="small"
-              sx={{ borderRadius: 1, py: 0.5 }}
-            >
-              <ListItemIcon sx={{ minWidth: 32 }}>
-                <SearchIcon fontSize="small" />
-              </ListItemIcon>
-              <ListItemText 
-                primary="New JQL Query"
-                sx={{ '& .MuiListItemText-primary': { fontSize: '0.8rem' } }}
-              />
-            </ListItemButton>
-          </ListItem>
-          <ListItem disablePadding>
-            <ListItemButton
               onClick={() => navigate('/direct-query')}
               size="small"
               sx={{ borderRadius: 1, py: 0.5 }}
@@ -233,7 +210,7 @@ const Sidebar: React.FC<SidebarProps> = ({ open }) => {
                 <CodeIcon fontSize="small" />
               </ListItemIcon>
               <ListItemText 
-                primary="Direct ES Query"
+                primary="New Direct Query"
                 sx={{ '& .MuiListItemText-primary': { fontSize: '0.8rem' } }}
               />
             </ListItemButton>

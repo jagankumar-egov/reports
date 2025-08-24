@@ -556,6 +556,452 @@ const DirectQuery: React.FC = () => {
                   />
                 </Grid>
 
+                {/* Query Guidelines Panel */}
+                <Grid item xs={12}>
+                  <Box sx={{ display: 'flex', alignItems: 'center', gap: 1, mb: 1 }}>
+                    <IconButton
+                      onClick={() => setGuidelinesOpen(!guidelinesOpen)}
+                      size="small"
+                    >
+                      {guidelinesOpen ? <ExpandLessIcon /> : <ExpandMoreIcon />}
+                    </IconButton>
+                    <Typography variant="body2" color="text.secondary">
+                      Query Examples & Guidelines
+                    </Typography>
+                    <HelpIcon sx={{ fontSize: 16, color: 'text.disabled' }} />
+                  </Box>
+                  
+                  <Collapse in={guidelinesOpen}>
+                    <Box sx={{ 
+                      border: 1, 
+                      borderColor: 'divider', 
+                      borderRadius: 1, 
+                      p: 2, 
+                      bgcolor: 'background.paper',
+                      mb: 2
+                    }}>
+                      <Tabs 
+                        value={selectedTab} 
+                        onChange={(_, newTab) => setSelectedTab(newTab)}
+                        variant="scrollable"
+                        scrollButtons="auto"
+                        sx={{ borderBottom: 1, borderColor: 'divider', mb: 2 }}
+                      >
+                        <Tab label="Basic Queries" />
+                        <Tab label="Filters" />
+                        <Tab label="Aggregations" />
+                        <Tab label="Advanced" />
+                      </Tabs>
+                      
+                      {selectedTab === 0 && (
+                        <Box>
+                          <Typography variant="subtitle2" gutterBottom>Basic Query Examples</Typography>
+                          
+                          <Box sx={{ mb: 2 }}>
+                            <Typography variant="body2" sx={{ mb: 1, fontWeight: 'medium' }}>Match All Documents:</Typography>
+                            <Box sx={{ 
+                              bgcolor: 'grey.50', 
+                              p: 2, 
+                              borderRadius: 1, 
+                              fontFamily: 'monospace', 
+                              fontSize: '0.875rem',
+                              position: 'relative'
+                            }}>
+                              <IconButton
+                                size="small"
+                                sx={{ position: 'absolute', top: 4, right: 4 }}
+                                onClick={() => navigator.clipboard.writeText('{\n  "query": {\n    "match_all": {}\n  },\n  "size": 10\n}')}
+                              >
+                                <CopyIcon fontSize="small" />
+                              </IconButton>
+                              <pre style={{ margin: 0, whiteSpace: 'pre-wrap' }}>
+{`{
+  "query": {
+    "match_all": {}
+  },
+  "size": 10
+}`}
+                              </pre>
+                            </Box>
+                          </Box>
+                          
+                          <Box sx={{ mb: 2 }}>
+                            <Typography variant="body2" sx={{ mb: 1, fontWeight: 'medium' }}>Match Specific Field:</Typography>
+                            <Box sx={{ 
+                              bgcolor: 'grey.50', 
+                              p: 2, 
+                              borderRadius: 1, 
+                              fontFamily: 'monospace', 
+                              fontSize: '0.875rem',
+                              position: 'relative'
+                            }}>
+                              <IconButton
+                                size="small"
+                                sx={{ position: 'absolute', top: 4, right: 4 }}
+                                onClick={() => navigator.clipboard.writeText('{\n  "query": {\n    "match": {\n      "field_name": "search_value"\n    }\n  },\n  "size": 10\n}')}
+                              >
+                                <CopyIcon fontSize="small" />
+                              </IconButton>
+                              <pre style={{ margin: 0, whiteSpace: 'pre-wrap' }}>
+{`{
+  "query": {
+    "match": {
+      "field_name": "search_value"
+    }
+  },
+  "size": 10
+}`}
+                              </pre>
+                            </Box>
+                          </Box>
+                          
+                          <Box>
+                            <Typography variant="body2" sx={{ mb: 1, fontWeight: 'medium' }}>Term Query (Exact Match):</Typography>
+                            <Box sx={{ 
+                              bgcolor: 'grey.50', 
+                              p: 2, 
+                              borderRadius: 1, 
+                              fontFamily: 'monospace', 
+                              fontSize: '0.875rem',
+                              position: 'relative'
+                            }}>
+                              <IconButton
+                                size="small"
+                                sx={{ position: 'absolute', top: 4, right: 4 }}
+                                onClick={() => navigator.clipboard.writeText('{\n  "query": {\n    "term": {\n      "status.keyword": "active"\n    }\n  },\n  "size": 10\n}')}
+                              >
+                                <CopyIcon fontSize="small" />
+                              </IconButton>
+                              <pre style={{ margin: 0, whiteSpace: 'pre-wrap' }}>
+{`{
+  "query": {
+    "term": {
+      "status.keyword": "active"
+    }
+  },
+  "size": 10
+}`}
+                              </pre>
+                            </Box>
+                          </Box>
+                        </Box>
+                      )}
+                      
+                      {selectedTab === 1 && (
+                        <Box>
+                          <Typography variant="subtitle2" gutterBottom>Filter Query Examples</Typography>
+                          
+                          <Box sx={{ mb: 2 }}>
+                            <Typography variant="body2" sx={{ mb: 1, fontWeight: 'medium' }}>Range Filter:</Typography>
+                            <Box sx={{ 
+                              bgcolor: 'grey.50', 
+                              p: 2, 
+                              borderRadius: 1, 
+                              fontFamily: 'monospace', 
+                              fontSize: '0.875rem',
+                              position: 'relative'
+                            }}>
+                              <IconButton
+                                size="small"
+                                sx={{ position: 'absolute', top: 4, right: 4 }}
+                                onClick={() => navigator.clipboard.writeText('{\n  "query": {\n    "range": {\n      "age": {\n        "gte": 18,\n        "lte": 65\n      }\n    }\n  },\n  "size": 10\n}')}
+                              >
+                                <CopyIcon fontSize="small" />
+                              </IconButton>
+                              <pre style={{ margin: 0, whiteSpace: 'pre-wrap' }}>
+{`{
+  "query": {
+    "range": {
+      "age": {
+        "gte": 18,
+        "lte": 65
+      }
+    }
+  },
+  "size": 10
+}`}
+                              </pre>
+                            </Box>
+                          </Box>
+                          
+                          <Box sx={{ mb: 2 }}>
+                            <Typography variant="body2" sx={{ mb: 1, fontWeight: 'medium' }}>Multiple Filters (AND):</Typography>
+                            <Box sx={{ 
+                              bgcolor: 'grey.50', 
+                              p: 2, 
+                              borderRadius: 1, 
+                              fontFamily: 'monospace', 
+                              fontSize: '0.875rem',
+                              position: 'relative'
+                            }}>
+                              <IconButton
+                                size="small"
+                                sx={{ position: 'absolute', top: 4, right: 4 }}
+                                onClick={() => navigator.clipboard.writeText('{\n  "query": {\n    "bool": {\n      "must": [\n        { "term": { "status.keyword": "active" } },\n        { "range": { "created_at": { "gte": "2023-01-01" } } }\n      ]\n    }\n  },\n  "size": 10\n}')}
+                              >
+                                <CopyIcon fontSize="small" />
+                              </IconButton>
+                              <pre style={{ margin: 0, whiteSpace: 'pre-wrap' }}>
+{`{
+  "query": {
+    "bool": {
+      "must": [
+        { "term": { "status.keyword": "active" } },
+        { "range": { "created_at": { "gte": "2023-01-01" } } }
+      ]
+    }
+  },
+  "size": 10
+}`}
+                              </pre>
+                            </Box>
+                          </Box>
+                          
+                          <Box>
+                            <Typography variant="body2" sx={{ mb: 1, fontWeight: 'medium' }}>Exclude Filter (NOT):</Typography>
+                            <Box sx={{ 
+                              bgcolor: 'grey.50', 
+                              p: 2, 
+                              borderRadius: 1, 
+                              fontFamily: 'monospace', 
+                              fontSize: '0.875rem',
+                              position: 'relative'
+                            }}>
+                              <IconButton
+                                size="small"
+                                sx={{ position: 'absolute', top: 4, right: 4 }}
+                                onClick={() => navigator.clipboard.writeText('{\n  "query": {\n    "bool": {\n      "must_not": [\n        { "term": { "status.keyword": "deleted" } }\n      ]\n    }\n  },\n  "size": 10\n}')}
+                              >
+                                <CopyIcon fontSize="small" />
+                              </IconButton>
+                              <pre style={{ margin: 0, whiteSpace: 'pre-wrap' }}>
+{`{
+  "query": {
+    "bool": {
+      "must_not": [
+        { "term": { "status.keyword": "deleted" } }
+      ]
+    }
+  },
+  "size": 10
+}`}
+                              </pre>
+                            </Box>
+                          </Box>
+                        </Box>
+                      )}
+                      
+                      {selectedTab === 2 && (
+                        <Box>
+                          <Typography variant="subtitle2" gutterBottom>Aggregation Examples</Typography>
+                          
+                          <Box sx={{ mb: 2 }}>
+                            <Typography variant="body2" sx={{ mb: 1, fontWeight: 'medium' }}>Terms Aggregation (Group By):</Typography>
+                            <Box sx={{ 
+                              bgcolor: 'grey.50', 
+                              p: 2, 
+                              borderRadius: 1, 
+                              fontFamily: 'monospace', 
+                              fontSize: '0.875rem',
+                              position: 'relative'
+                            }}>
+                              <IconButton
+                                size="small"
+                                sx={{ position: 'absolute', top: 4, right: 4 }}
+                                onClick={() => navigator.clipboard.writeText('{\n  "size": 0,\n  "aggs": {\n    "status_counts": {\n      "terms": {\n        "field": "status.keyword",\n        "size": 10\n      }\n    }\n  }\n}')}
+                              >
+                                <CopyIcon fontSize="small" />
+                              </IconButton>
+                              <pre style={{ margin: 0, whiteSpace: 'pre-wrap' }}>
+{`{
+  "size": 0,
+  "aggs": {
+    "status_counts": {
+      "terms": {
+        "field": "status.keyword",
+        "size": 10
+      }
+    }
+  }
+}`}
+                              </pre>
+                            </Box>
+                          </Box>
+                          
+                          <Box sx={{ mb: 2 }}>
+                            <Typography variant="body2" sx={{ mb: 1, fontWeight: 'medium' }}>Date Histogram:</Typography>
+                            <Box sx={{ 
+                              bgcolor: 'grey.50', 
+                              p: 2, 
+                              borderRadius: 1, 
+                              fontFamily: 'monospace', 
+                              fontSize: '0.875rem',
+                              position: 'relative'
+                            }}>
+                              <IconButton
+                                size="small"
+                                sx={{ position: 'absolute', top: 4, right: 4 }}
+                                onClick={() => navigator.clipboard.writeText('{\n  "size": 0,\n  "aggs": {\n    "monthly_counts": {\n      "date_histogram": {\n        "field": "created_at",\n        "calendar_interval": "month"\n      }\n    }\n  }\n}')}
+                              >
+                                <CopyIcon fontSize="small" />
+                              </IconButton>
+                              <pre style={{ margin: 0, whiteSpace: 'pre-wrap' }}>
+{`{
+  "size": 0,
+  "aggs": {
+    "monthly_counts": {
+      "date_histogram": {
+        "field": "created_at",
+        "calendar_interval": "month"
+      }
+    }
+  }
+}`}
+                              </pre>
+                            </Box>
+                          </Box>
+                          
+                          <Box>
+                            <Typography variant="body2" sx={{ mb: 1, fontWeight: 'medium' }}>Statistics Aggregation:</Typography>
+                            <Box sx={{ 
+                              bgcolor: 'grey.50', 
+                              p: 2, 
+                              borderRadius: 1, 
+                              fontFamily: 'monospace', 
+                              fontSize: '0.875rem',
+                              position: 'relative'
+                            }}>
+                              <IconButton
+                                size="small"
+                                sx={{ position: 'absolute', top: 4, right: 4 }}
+                                onClick={() => navigator.clipboard.writeText('{\n  "size": 0,\n  "aggs": {\n    "age_stats": {\n      "stats": {\n        "field": "age"\n      }\n    }\n  }\n}')}
+                              >
+                                <CopyIcon fontSize="small" />
+                              </IconButton>
+                              <pre style={{ margin: 0, whiteSpace: 'pre-wrap' }}>
+{`{
+  "size": 0,
+  "aggs": {
+    "age_stats": {
+      "stats": {
+        "field": "age"
+      }
+    }
+  }
+}`}
+                              </pre>
+                            </Box>
+                          </Box>
+                        </Box>
+                      )}
+                      
+                      {selectedTab === 3 && (
+                        <Box>
+                          <Typography variant="subtitle2" gutterBottom>Advanced Query Examples</Typography>
+                          
+                          <Box sx={{ mb: 2 }}>
+                            <Typography variant="body2" sx={{ mb: 1, fontWeight: 'medium' }}>Wildcard Search:</Typography>
+                            <Box sx={{ 
+                              bgcolor: 'grey.50', 
+                              p: 2, 
+                              borderRadius: 1, 
+                              fontFamily: 'monospace', 
+                              fontSize: '0.875rem',
+                              position: 'relative'
+                            }}>
+                              <IconButton
+                                size="small"
+                                sx={{ position: 'absolute', top: 4, right: 4 }}
+                                onClick={() => navigator.clipboard.writeText('{\n  "query": {\n    "wildcard": {\n      "name.keyword": "*john*"\n    }\n  },\n  "size": 10\n}')}
+                              >
+                                <CopyIcon fontSize="small" />
+                              </IconButton>
+                              <pre style={{ margin: 0, whiteSpace: 'pre-wrap' }}>
+{`{
+  "query": {
+    "wildcard": {
+      "name.keyword": "*john*"
+    }
+  },
+  "size": 10
+}`}
+                              </pre>
+                            </Box>
+                          </Box>
+                          
+                          <Box sx={{ mb: 2 }}>
+                            <Typography variant="body2" sx={{ mb: 1, fontWeight: 'medium' }}>Fuzzy Search:</Typography>
+                            <Box sx={{ 
+                              bgcolor: 'grey.50', 
+                              p: 2, 
+                              borderRadius: 1, 
+                              fontFamily: 'monospace', 
+                              fontSize: '0.875rem',
+                              position: 'relative'
+                            }}>
+                              <IconButton
+                                size="small"
+                                sx={{ position: 'absolute', top: 4, right: 4 }}
+                                onClick={() => navigator.clipboard.writeText('{\n  "query": {\n    "fuzzy": {\n      "name": {\n        "value": "john",\n        "fuzziness": "AUTO"\n      }\n    }\n  },\n  "size": 10\n}')}
+                              >
+                                <CopyIcon fontSize="small" />
+                              </IconButton>
+                              <pre style={{ margin: 0, whiteSpace: 'pre-wrap' }}>
+{`{
+  "query": {
+    "fuzzy": {
+      "name": {
+        "value": "john",
+        "fuzziness": "AUTO"
+      }
+    }
+  },
+  "size": 10
+}`}
+                              </pre>
+                            </Box>
+                          </Box>
+                          
+                          <Box>
+                            <Typography variant="body2" sx={{ mb: 1, fontWeight: 'medium' }}>Multi-Match Query:</Typography>
+                            <Box sx={{ 
+                              bgcolor: 'grey.50', 
+                              p: 2, 
+                              borderRadius: 1, 
+                              fontFamily: 'monospace', 
+                              fontSize: '0.875rem',
+                              position: 'relative'
+                            }}>
+                              <IconButton
+                                size="small"
+                                sx={{ position: 'absolute', top: 4, right: 4 }}
+                                onClick={() => navigator.clipboard.writeText('{\n  "query": {\n    "multi_match": {\n      "query": "search term",\n      "fields": ["name", "description", "content"]\n    }\n  },\n  "size": 10\n}')}
+                              >
+                                <CopyIcon fontSize="small" />
+                              </IconButton>
+                              <pre style={{ margin: 0, whiteSpace: 'pre-wrap' }}>
+{`{
+  "query": {
+    "multi_match": {
+      "query": "search term",
+      "fields": ["name", "description", "content"]
+    }
+  },
+  "size": 10
+}`}
+                              </pre>
+                            </Box>
+                          </Box>
+                        </Box>
+                      )}
+                      
+                      <Typography variant="caption" color="text.secondary" sx={{ mt: 2, display: 'block' }}>
+                        💡 Tip: Click the copy icon to copy examples to clipboard. Modify field names and values to match your index schema.
+                      </Typography>
+                    </Box>
+                  </Collapse>
+                </Grid>
+
                 {/* Action Buttons */}
                 <Grid item xs={12}>
                   <Box sx={{ display: 'flex', gap: 2 }}>
