@@ -28,6 +28,7 @@ import { useElasticsearchQuery } from '@/hooks/useElasticsearchQuery';
 import { useElasticsearchPagination } from '@/hooks/useElasticsearchPagination';
 import { directQueryAPI } from '@/services/api';
 import { extractFieldsFromMapping, FieldInfo } from '@/utils/mappingUtils';
+import { QueryCondition } from '@/components/common/QueryBuilder';
 
 const QueryBuilderPage: React.FC = () => {
   // Use shared hooks
@@ -44,7 +45,7 @@ const QueryBuilderPage: React.FC = () => {
   const [fieldsLoading, setFieldsLoading] = useState(false);
   const [fieldsError, setFieldsError] = useState<string | null>(null);
   const [builtQuery, setBuiltQuery] = useState<any>(null);
-  const [conditions, setConditions] = useState<any[]>([]);
+  const [conditions, setConditions] = useState<QueryCondition[]>([]);
 
   // Load fields when index changes
   useEffect(() => {
@@ -98,16 +99,6 @@ const QueryBuilderPage: React.FC = () => {
     await query.executeQuery();
   }, [query, builtQuery]);
 
-  // Handle query text change (when user edits the generated query)
-  const handleQueryChange = useCallback((event: React.ChangeEvent<HTMLTextAreaElement>) => {
-    query.setQueryText(event.target.value);
-    try {
-      const parsedQuery = JSON.parse(event.target.value);
-      setBuiltQuery(parsedQuery);
-    } catch {
-      // Invalid JSON, keep the text but don't update builtQuery
-    }
-  }, [query]);
 
   const { columns, rows } = query.result ? query.formatResultsForTable(pagination.getPaginatedHits(query.result)) : { columns: [], rows: [] };
   const totalHits = typeof query.result?.hits?.total === 'number' 
@@ -150,6 +141,7 @@ const QueryBuilderPage: React.FC = () => {
                 <QueryBuilder
                   fields={fields}
                   onQueryGenerated={handleQueryGenerated}
+                  onConditionsChange={setConditions}
                 />
               )}
               
@@ -215,26 +207,32 @@ const QueryBuilderPage: React.FC = () => {
                 {/* ShareableLink and Export Actions */}
                 <Grid item xs={12} sm={3}>
                   <ShareableLink 
-                    queryText={query.queryText}
-                    selectedIndex={query.selectedIndex}
-                    filters={conditions
-                      .filter(condition => condition.field && condition.operator && condition.value.trim())
-                      .map(condition => ({
-                        field: condition.field!.fullPath,
-                        operator: condition.operator!,
-                        value: condition.value,
-                        type: 'visual_query',
-                        label: `${condition.field!.fullPath} ${condition.operator} ${condition.value}`,
-                      }))}
+                    index={query.selectedIndex}
+                    query={query.queryText}
+                    from={0}
+                    size={10}
+                    autoExecute={true}
+                    buttonText="Share Query"
+                    buttonSize="large"
                   />
                 </Grid>
                 
                 <Grid item xs={12} sm={3}>
                   <ExportActions
-                    result={query.result}
-                    selectedIndex={query.selectedIndex}
+                    onExcelExport={() => {
+                      // TODO: Implement Excel export for QueryBuilder
+                      console.log('Excel export for QueryBuilder');
+                    }}
+                    onColumnFilterClick={() => {
+                      // TODO: Implement column filter for QueryBuilder
+                      console.log('Column filter for QueryBuilder');
+                    }}
+                    selectedColumnsCount={0}
+                    totalColumnsCount={0}
                     disabled={!query.result || query.loading}
-                    variant="button"
+                    showExcelExport={true}
+                    showColumnFilter={false}
+                    excelLabel="Export Results"
                   />
                 </Grid>
               </Grid>

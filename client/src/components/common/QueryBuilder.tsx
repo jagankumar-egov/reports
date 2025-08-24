@@ -104,7 +104,7 @@ const QueryBuilder: React.FC<QueryBuilderProps> = ({
 
   // Clear all conditions
   const clearAllConditions = useCallback(() => {
-    const newConditions = [{ id: generateId(), logicalOperator: 'AND', value: '' }];
+    const newConditions: QueryCondition[] = [{ id: generateId(), logicalOperator: 'AND', value: '' }];
     setConditions(newConditions);
     onConditionsChange?.(newConditions);
     setGeneratedQuery('');
