@@ -1,41 +1,23 @@
 import React, { useState, useCallback, useEffect } from 'react';
 import {
   Box,
-  Card,
-  CardContent,
-  CardHeader,
-  TextField,
-  Button,
   Typography,
-  Divider,
   Grid,
-  CircularProgress,
-  IconButton,
-  Tooltip,
 } from '@mui/material';
 import {
-  PlayArrow as ExecuteIcon,
-  Clear as ClearIcon,
-  Storage as IndexIcon,
   Code as CodeIcon,
-  TableView as TableIcon,
 } from '@mui/icons-material';
 
 import {
-  QueryInput,
-  DataTable,
-  QueryGuidelines,
-  IndexSelector,
+  QueryExecutionCard,
+  QueryResultsSection,
   ColumnFilter,
   ExportActions,
-  ErrorDisplay,
-  AggregationsDisplay,
-  TableRow,
-  ShareableLink,
 } from '@/components/common';
 
-import { DirectQueryRequest, DirectQueryResponse, ElasticsearchHit } from '@/types';
-import { directQueryAPI } from '@/services/api';
+import { useElasticsearchQuery } from '@/hooks/useElasticsearchQuery';
+import { useElasticsearchPagination } from '@/hooks/useElasticsearchPagination';
+
 import {
   exportToExcel,
   getSelectedColumnsForIndex,
@@ -45,86 +27,48 @@ import {
 } from '@/utils/excelExport';
 
 const DirectQuery: React.FC = () => {
+  // Use shared hooks
+  const query = useElasticsearchQuery({
+    onResult: (result) => {
+      setLastQueryWasFiltered(queryUsesFiltering);
+      pagination.resetPagination();
+    },
+  });
+
+  const pagination = useElasticsearchPagination(10);
   
-  // State management
-  const [selectedIndex, setSelectedIndex] = useState<string>('');
-  const [queryText, setQueryText] = useState<string>('{\n  "query": {\n    "match_all": {}\n  },\n  "size": 10\n}');
+  // DirectQuery-specific state for from/size parameters
   const [from, setFrom] = useState<number>(0);
   const [size, setSize] = useState<number>(10);
-  const [result, setResult] = useState<DirectQueryResponse | null>(null);
-  const [loading, setLoading] = useState<boolean>(false);
-  const [error, setError] = useState<string | null>(null);
-  const [availableIndexes, setAvailableIndexes] = useState<string[]>([]);
-  const [indexesLoading, setIndexesLoading] = useState<boolean>(true);
   
-  // Table pagination state
-  const [page, setPage] = useState(0);
-  const [rowsPerPage, setRowsPerPage] = useState(10);
-  
-  // Column selection state
+  // Column selection state (DirectQuery specific)
   const [selectedColumns, setSelectedColumns] = useState<string[]>([]);
   const [availableColumns, setAvailableColumns] = useState<string[]>([]);
   const [schemaColumns, setSchemaColumns] = useState<string[]>([]); // Full schema, not affected by filtering
   const [lastQueryWasFiltered, setLastQueryWasFiltered] = useState<boolean>(false);
   const [columnFilterOpen, setColumnFilterOpen] = useState(false);
   const [columnAnchorEl, setColumnAnchorEl] = useState<HTMLButtonElement | null>(null);
-
-
-  // Load available indexes on mount
-  useEffect(() => {
-    const loadIndexes = async () => {
-      try {
-        setIndexesLoading(true);
-        const indexes = await directQueryAPI.getIndexes();
-        setAvailableIndexes(indexes);
-        
-        if (indexes.length > 0 && !selectedIndex) {
-          setSelectedIndex(indexes[0]);
-        }
-      } catch (err: any) {
-        // Handle structured API errors for index loading
-        let errorMessage = 'Failed to load indexes';
-        
-        if (err && typeof err === 'object' && err.message) {
-          errorMessage = `Failed to load indexes: ${err.message}`;
-          if (err.code) {
-            errorMessage = `Failed to load indexes: ${err.code} - ${err.message}`;
-          }
-        } else if (err instanceof Error) {
-          errorMessage = `Failed to load indexes: ${err.message}`;
-        } else {
-          errorMessage = `Failed to load indexes: ${String(err)}`;
-        }
-        
-        setError(errorMessage);
-      } finally {
-        setIndexesLoading(false);
-      }
-    };
-
-    loadIndexes();
-  }, [selectedIndex]);
+  const [queryUsesFiltering, setQueryUsesFiltering] = useState(false);
 
   // Reset column selection when index changes
   useEffect(() => {
-    if (selectedIndex) {
+    if (query.selectedIndex) {
       // Clear current selections to force refresh
       setAvailableColumns([]);
       setSelectedColumns([]);
       setSchemaColumns([]);
       setLastQueryWasFiltered(false);
       // Clear any results from previous index
-      setResult(null);
-      setError(null);
+      query.clearResults();
     }
-  }, [selectedIndex]);
+  }, [query.selectedIndex]);
 
   // Update schema columns when we get unfiltered results
   useEffect(() => {
-    if (result?.hits?.hits && !lastQueryWasFiltered && schemaColumns.length === 0) {
+    if (query.result?.hits?.hits && !lastQueryWasFiltered && schemaColumns.length === 0) {
       // Extract all columns from the unfiltered result
       const allKeys = new Set<string>();
-      result.hits.hits.forEach(hit => {
+      query.result.hits.hits.forEach(hit => {
         if (hit._source) {
           const extractKeys = (obj: any, prefix = '') => {
             Object.keys(obj).forEach(key => {
@@ -145,7 +89,7 @@ const DirectQuery: React.FC = () => {
       setAvailableColumns(allColumns);
       
       // Load saved column preferences for this index
-      const savedColumns = getSelectedColumnsForIndex(selectedIndex);
+      const savedColumns = getSelectedColumnsForIndex(query.selectedIndex);
       if (savedColumns && savedColumns.length > 0) {
         // Filter saved columns to only include ones that exist in the schema
         const validSavedColumns = savedColumns.filter(col => allColumns.includes(col));
@@ -160,154 +104,54 @@ const DirectQuery: React.FC = () => {
         setSelectedColumns(allColumns);
       }
     }
-  }, [result, lastQueryWasFiltered, schemaColumns.length, selectedIndex]);
+  }, [query.result, lastQueryWasFiltered, schemaColumns.length, query.selectedIndex]);
 
-  // Execute query
+  // Enhanced execute function with column filtering
   const handleExecute = useCallback(async () => {
-    if (!selectedIndex) {
-      setError('Please select an index');
-      return;
-    }
-
-    if (!queryText.trim()) {
-      setError('Please enter a query');
-      return;
-    }
-
-    try {
-      setLoading(true);
-      setError(null);
-      
-      // Parse the query
-      let parsedQuery;
-      try {
-        parsedQuery = JSON.parse(queryText);
-      } catch (parseError) {
-        throw new Error(`Invalid JSON query: ${parseError instanceof Error ? parseError.message : String(parseError)}`);
+    // Prepare _source filtering for optimization
+    // Only apply filtering if user has made explicit column selections
+    let sourceFilter: string[] | boolean = true; // Default: return all fields
+    
+    if (selectedColumns.length > 0) {
+      // User has selected columns - filter to only non-metadata fields
+      const sourceFields = selectedColumns.filter(col => !col.startsWith('_'));
+      if (sourceFields.length > 0) {
+        sourceFilter = sourceFields;
+        setQueryUsesFiltering(true);
       }
-
-      // Prepare _source filtering for optimization
-      // Only apply filtering if user has made explicit column selections
-      let sourceFilter: string[] | boolean = true; // Default: return all fields
-      
-      if (selectedColumns.length > 0) {
-        // User has selected columns - filter to only non-metadata fields
-        const sourceFields = selectedColumns.filter(col => !col.startsWith('_'));
-        if (sourceFields.length > 0) {
+    } else {
+      // No columns selected yet - check if there are saved preferences
+      const savedColumns = getSelectedColumnsForIndex(query.selectedIndex);
+      if (savedColumns && savedColumns.length > 0) {
+        const sourceFields = savedColumns.filter(col => !col.startsWith('_'));
+        if (sourceFields.length > 0 && savedColumns.length < 10) { // Only filter if user has limited selection
           sourceFilter = sourceFields;
-        }
-      } else {
-        // No columns selected yet - check if there are saved preferences
-        const savedColumns = getSelectedColumnsForIndex(selectedIndex);
-        if (savedColumns && savedColumns.length > 0) {
-          const sourceFields = savedColumns.filter(col => !col.startsWith('_'));
-          if (sourceFields.length > 0 && savedColumns.length < 10) { // Only filter if user has limited selection
-            sourceFilter = sourceFields;
-          }
+          setQueryUsesFiltering(true);
         }
       }
-      
-      // Extract from and size from the parsed query if they exist
-      const queryFrom = parsedQuery.from !== undefined ? parsedQuery.from : from;
-      const querySize = parsedQuery.size !== undefined ? parsedQuery.size : size;
-      
-      const request: DirectQueryRequest = {
-        index: selectedIndex,
-        query: parsedQuery,
-        from: queryFrom,
-        size: querySize,
-        _source: sourceFilter,
-      };
-
-      // Track whether this query uses filtering
-      const queryUsesFiltering = Array.isArray(sourceFilter);
-      
-      // Debug logging (can be enabled for troubleshooting)
-      // console.log('DirectQuery: Executing with _source filter:', {
-      //   selectedColumns: selectedColumns.length > 0 ? selectedColumns : 'none',
-      //   sourceFilter: sourceFilter,
-      //   filterType: Array.isArray(sourceFilter) ? 'array' : 'boolean'
-      // });
-
-      const response = await directQueryAPI.execute(request);
-      setResult(response);
-      setLastQueryWasFiltered(queryUsesFiltering);
-      setPage(0); // Reset to first page when new results come in
-      
-    } catch (err: any) {
-      // Handle structured API errors
-      let errorMessage = 'An unknown error occurred';
-      
-      if (err && typeof err === 'object') {
-        if (err.message) {
-          errorMessage = err.message;
-          
-          // Add more context for specific errors
-          if (err.code) {
-            errorMessage = `${err.code}: ${err.message}`;
-          }
-          
-          // For Elasticsearch errors, try to extract the root cause
-          if (err.details && err.details.includes('index_not_found_exception')) {
-            const indexMatch = err.details.match(/no such index \[([^\]]+)\]/);
-            if (indexMatch) {
-              errorMessage = `Index '${indexMatch[1]}' not found. Please check if the index exists and try again.`;
-            }
-          } else if (err.details && err.details.includes('parsing_exception')) {
-            errorMessage = `Query parsing error: ${err.message}. Please check your Elasticsearch query syntax.`;
-          } else if (err.details && err.details.includes('search_phase_execution_exception')) {
-            errorMessage = `Search execution error: ${err.message}. There may be an issue with the query or index mapping.`;
-          } else if (err.code === 'ACCESS_DENIED') {
-            errorMessage = `Access denied: ${err.message}. Please check if you have permission to access this index.`;
-          } else if (err.code === 'INTERNAL_ERROR' && err.details) {
-            // Try to extract meaningful error from internal errors
-            if (err.details.includes('connection')) {
-              errorMessage = `Connection error: Unable to connect to Elasticsearch. Please try again.`;
-            } else if (err.details.includes('timeout')) {
-              errorMessage = `Request timeout: The query took too long to execute. Try simplifying your query or increasing the timeout.`;
-            }
-          }
-        } else if (err.code && err.status) {
-          errorMessage = `${err.code} (${err.status})`;
-        }
-      } else if (err instanceof Error) {
-        errorMessage = err.message;
-      } else {
-        errorMessage = String(err);
-      }
-      
-      setError(errorMessage);
-      setResult(null);
-    } finally {
-      setLoading(false);
     }
-  }, [selectedIndex, queryText, from, size]);
-
-  // Clear results
-  const handleClear = useCallback(() => {
-    setResult(null);
-    setError(null);
-    setPage(0);
-  }, []);
+    
+    // Track whether this query uses filtering
+    const queryUsesFilteringFlag = Array.isArray(sourceFilter);
+    setQueryUsesFiltering(queryUsesFilteringFlag);
+    
+    await query.executeQuery(from, size, sourceFilter);
+  }, [query, from, size, selectedColumns]);
 
   // Handle query text change
   const handleQueryChange = useCallback((event: React.ChangeEvent<HTMLTextAreaElement>) => {
-    setQueryText(event.target.value);
-    setError(null); // Clear errors when user modifies query
-  }, []);
-
-  // Handle pagination
-  const handleChangePage = useCallback((_event: unknown, newPage: number) => {
-    setPage(newPage);
-  }, []);
-
-  const handleChangeRowsPerPage = useCallback((event: React.ChangeEvent<HTMLInputElement>) => {
-    setRowsPerPage(parseInt(event.target.value, 10));
-    setPage(0);
-  }, []);
+    query.setQueryText(event.target.value);
+  }, [query]);
 
   // Format result data for table display
-  const formatResultsForTable = useCallback((hits: ElasticsearchHit[]) => {
+  const getPaginatedHits = useCallback(() => {
+    if (!query.result?.hits?.hits) return [];
+    const start = pagination.page * pagination.rowsPerPage;
+    const end = start + pagination.rowsPerPage;
+    return query.result.hits.hits.slice(start, end);
+  }, [query.result, pagination.page, pagination.rowsPerPage]);
+
+  const formatResultsForTable = useCallback((hits: any[]) => {
     if (!hits || hits.length === 0) return { columns: [], rows: [] };
 
     // Get all unique keys from all documents
@@ -338,7 +182,7 @@ const DirectQuery: React.FC = () => {
     
     // Create rows
     const rows = hits.map((hit, index) => {
-      const row: TableRow = {
+      const row: any = {
         id: `${hit._id}-${index}`,
         _id: hit._id,
         _score: hit._score,
@@ -366,21 +210,10 @@ const DirectQuery: React.FC = () => {
     return { columns: displayColumns, rows };
   }, [selectedColumns]);
 
-  // Get paginated data
-  const getPaginatedHits = useCallback(() => {
-    if (!result?.hits?.hits) return [];
-    const start = page * rowsPerPage;
-    const end = start + rowsPerPage;
-    return result.hits.hits.slice(start, end);
-  }, [result, page, rowsPerPage]);
-
-  // Helper function to compare arrays
-  const arraysEqual = (a: string[], b: string[]) => {
-    return a.length === b.length && a.every((val, index) => val === b[index]);
-  };
-
-  const { columns, rows } = formatResultsForTable(getPaginatedHits());
-  const totalHits = result?.hits?.total?.value || 0;
+  const { columns, rows } = query.result ? formatResultsForTable(getPaginatedHits()) : { columns: [], rows: [] };
+  const totalHits = typeof query.result?.hits?.total === 'number' 
+    ? query.result.hits.total 
+    : query.result?.hits?.total?.value || 0;
   
   // Handle column selection change
   const handleColumnToggle = useCallback((column: string) => {
@@ -390,54 +223,48 @@ const DirectQuery: React.FC = () => {
         : [...prev, column];
       
       // Save preferences to session storage
-      if (selectedIndex) {
-        saveColumnPreferences(selectedIndex, newSelection);
-        // Debug: Column selection updated
-        // console.log('DirectQuery: Column selection updated:', {
-        //   column,
-        //   newSelection,
-        //   index: selectedIndex
-        // });
+      if (query.selectedIndex) {
+        saveColumnPreferences(query.selectedIndex, newSelection);
       }
       
       return newSelection;
     });
-  }, [selectedIndex]);
+  }, [query.selectedIndex]);
   
   // Handle select all/none for columns
   const handleSelectAllColumns = useCallback(() => {
     const columnsToSelect = schemaColumns.length > 0 ? schemaColumns : availableColumns;
     setSelectedColumns(columnsToSelect);
-    if (selectedIndex) {
-      saveColumnPreferences(selectedIndex, columnsToSelect);
+    if (query.selectedIndex) {
+      saveColumnPreferences(query.selectedIndex, columnsToSelect);
     }
-  }, [schemaColumns, availableColumns, selectedIndex]);
+  }, [schemaColumns, availableColumns, query.selectedIndex]);
   
   const handleSelectNoColumns = useCallback(() => {
     // Keep at least _id column for table structure
     const minColumns = ['_id'];
     setSelectedColumns(minColumns);
-    if (selectedIndex) {
-      saveColumnPreferences(selectedIndex, minColumns);
+    if (query.selectedIndex) {
+      saveColumnPreferences(query.selectedIndex, minColumns);
     }
-  }, [selectedIndex]);
+  }, [query.selectedIndex]);
   
   // Handle Excel export
   const handleExcelExport = useCallback(() => {
-    if (!result?.hits?.hits || rows.length === 0) {
+    if (!query.result?.hits?.hits || rows.length === 0) {
       return;
     }
     
     // Get all data, not just paginated
-    const allResultsFormatted = formatResultsForTable(result.hits.hits);
+    const allResultsFormatted = formatResultsForTable(query.result.hits.hits);
     const exportData: ExportData = {
       columns: allResultsFormatted.columns,
       rows: allResultsFormatted.rows,
     };
     
-    const filename = `${selectedIndex}_query_results_${new Date().toISOString().split('T')[0]}`;
+    const filename = `${query.selectedIndex}_query_results_${new Date().toISOString().split('T')[0]}`;
     exportToExcel(exportData, filename);
-  }, [result, rows, formatResultsForTable, selectedIndex]);
+  }, [query.result, rows, formatResultsForTable, query.selectedIndex]);
   
   // Column filter popover handlers
   const handleColumnFilterClick = useCallback((event: React.MouseEvent<HTMLButtonElement>) => {
@@ -457,200 +284,73 @@ const DirectQuery: React.FC = () => {
         Direct Elasticsearch Query
       </Typography>
       
-      
       <Grid container spacing={3}>
-        {/* Query Input Section */}
+        {/* Query Configuration */}
         <Grid item xs={12}>
-          <Card elevation={2}>
-            <CardHeader 
-              title="Query Configuration"
-              avatar={<IndexIcon color="primary" />}
-            />
-            <CardContent>
-              <Grid container spacing={2}>
-                {/* Index Selection */}
-                <Grid item xs={12} md={4}>
-                  <IndexSelector
-                    selectedIndex={selectedIndex}
-                    availableIndexes={availableIndexes}
-                    onIndexChange={setSelectedIndex}
-                    loading={indexesLoading}
-                  />
-                </Grid>
-
-                {/* From Parameter */}
-                <Grid item xs={12} md={4}>
-                  <TextField
-                    fullWidth
-                    type="number"
-                    label="From (Offset)"
-                    value={from}
-                    onChange={(e) => setFrom(Math.max(0, parseInt(e.target.value) || 0))}
-                    inputProps={{ min: 0 }}
-                  />
-                </Grid>
-
-                {/* Size Parameter */}
-                <Grid item xs={12} md={4}>
-                  <TextField
-                    fullWidth
-                    type="number"
-                    label="Size (Limit)"
-                    value={size}
-                    onChange={(e) => setSize(Math.max(1, Math.min(1000, parseInt(e.target.value) || 10)))}
-                    inputProps={{ min: 1, max: 1000 }}
-                  />
-                </Grid>
-
-                {/* Query JSON Input */}
-                <QueryInput
-                  queryText={queryText}
-                  onQueryChange={handleQueryChange}
-                  disabled={loading}
-                />
-
-                {/* Query Guidelines Panel */}
-                <Grid item xs={12}>
-                  <QueryGuidelines />
-                </Grid>
-
-                {/* Action Buttons */}
-                <Grid item xs={12}>
-                  <Box sx={{ display: 'flex', gap: 2 }}>
-                    <Button
-                      variant="contained"
-                      startIcon={loading ? <CircularProgress size={16} /> : <ExecuteIcon />}
-                      onClick={handleExecute}
-                      disabled={loading || !selectedIndex}
-                      size="large"
-                    >
-                      {loading ? 'Executing...' : 'Execute Query'}
-                    </Button>
-                    
-                    <Button
-                      variant="outlined"
-                      startIcon={<ClearIcon />}
-                      onClick={handleClear}
-                      disabled={loading}
-                    >
-                      Clear Results
-                    </Button>
-                    
-                    <ShareableLink
-                      index={selectedIndex}
-                      query={queryText}
-                      from={from}
-                      size={size}
-                      autoExecute={true}
-                      buttonVariant="outlined"
-                      buttonSize="large"
-                    />
-                    
-                    {result && rows.length > 0 && (
-                      <ExportActions
-                        onExcelExport={handleExcelExport}
-                        onColumnFilterClick={handleColumnFilterClick}
-                        selectedColumnsCount={selectedColumns.length}
-                        totalColumnsCount={schemaColumns.length > 0 ? schemaColumns.length : availableColumns.length}
-                        disabled={loading}
-                      />
-                    )}
-                  </Box>
-                </Grid>
-              </Grid>
-            </CardContent>
-          </Card>
+          <QueryExecutionCard
+            selectedIndex={query.selectedIndex}
+            availableIndexes={query.availableIndexes}
+            onIndexChange={query.setSelectedIndex}
+            indexesLoading={query.indexesLoading}
+            queryText={query.queryText}
+            onQueryChange={handleQueryChange}
+            onExecute={handleExecute}
+            onClear={query.clearResults}
+            loading={query.loading}
+            showFromSize={true}
+            from={from}
+            size={size}
+            onFromChange={setFrom}
+            onSizeChange={setSize}
+          >
+            {query.result && rows.length > 0 && (
+              <ExportActions
+                onExcelExport={handleExcelExport}
+                onColumnFilterClick={handleColumnFilterClick}
+                selectedColumnsCount={selectedColumns.length}
+                totalColumnsCount={schemaColumns.length > 0 ? schemaColumns.length : availableColumns.length}
+                disabled={query.loading}
+              />
+            )}
+          </QueryExecutionCard>
         </Grid>
 
-        {/* Error Display */}
-        {error && (
-          <Grid item xs={12}>
-            <ErrorDisplay
-              error={error}
-              onClose={() => setError(null)}
-            />
-          </Grid>
-        )}
-
         {/* Results Section */}
-        {result && (
-          <>
-            {/* Aggregations Display */}
-            {result.aggregations && (
-              <Grid item xs={12}>
-                <AggregationsDisplay 
-                  aggregations={result.aggregations}
-                  title="Query Aggregations"
-                  defaultExpanded={true}
-                />
-              </Grid>
-            )}
-
-            {/* Results Table */}
-            <Grid item xs={12}>
-              <Card elevation={2}>
-                <CardHeader
-                  title={
-                    <Box sx={{ display: 'flex', alignItems: 'center', gap: 2 }}>
-                      <TableIcon />
-                      Query Results
-                      <Chip
-                        label={`${totalHits} hits in ${result.took}ms`}
-                        color="success"
-                        size="small"
-                      />
-                    </Box>
-                  }
-                />
-                <CardContent>
-                  {/* Query Info */}
-                  <Box sx={{ mb: 2 }}>
-                    <Typography variant="body2" color="text.secondary">
-                      <strong>Index:</strong> {selectedIndex} | 
-                      <strong> Shards:</strong> {result._shards.successful}/{result._shards.total} successful |
-                      <strong> Timed out:</strong> {result.timed_out ? 'Yes' : 'No'}
-                    </Typography>
-                  </Box>
-
-                  <Divider sx={{ mb: 2 }} />
-                  
-                  {/* Column Filter Popover */}
-                  <ColumnFilter
-                    open={columnFilterOpen}
-                    anchorEl={columnAnchorEl}
-                    onClose={handleColumnFilterClose}
-                    availableColumns={schemaColumns.length > 0 ? schemaColumns : availableColumns}
-                    selectedColumns={selectedColumns}
-                    onColumnToggle={handleColumnToggle}
-                    onSelectAll={handleSelectAllColumns}
-                    onSelectNone={handleSelectNoColumns}
-                    onReset={() => {
-                      if (selectedIndex) {
-                        clearColumnPreferencesForIndex(selectedIndex);
-                        const columnsToReset = schemaColumns.length > 0 ? schemaColumns : availableColumns;
-                        setSelectedColumns(columnsToReset);
-                      }
-                    }}
-                    footerMessage="Selected columns will be saved for this index"
-                  />
-
-                  {/* Results Table */}
-                  <DataTable
-                    columns={columns}
-                    rows={rows}
-                    page={page}
-                    rowsPerPage={rowsPerPage}
-                    totalCount={totalHits}
-                    onPageChange={handleChangePage}
-                    onRowsPerPageChange={handleChangeRowsPerPage}
-                    loading={loading}
-                    emptyMessage="No results found"
-                  />
-                </CardContent>
-              </Card>
-            </Grid>
-          </>
-        )}
+        <QueryResultsSection
+          result={query.result}
+          error={query.error}
+          loading={query.loading}
+          columns={columns}
+          rows={rows}
+          page={pagination.page}
+          rowsPerPage={pagination.rowsPerPage}
+          totalHits={totalHits}
+          onPageChange={pagination.handleChangePage}
+          onRowsPerPageChange={pagination.handleChangeRowsPerPage}
+          onRetryError={handleExecute}
+          selectedIndex={query.selectedIndex}
+          emptyMessage="No results found"
+        >
+          {/* Column Filter Popover */}
+          <ColumnFilter
+            open={columnFilterOpen}
+            anchorEl={columnAnchorEl}
+            onClose={handleColumnFilterClose}
+            availableColumns={schemaColumns.length > 0 ? schemaColumns : availableColumns}
+            selectedColumns={selectedColumns}
+            onColumnToggle={handleColumnToggle}
+            onSelectAll={handleSelectAllColumns}
+            onSelectNone={handleSelectNoColumns}
+            onReset={() => {
+              if (query.selectedIndex) {
+                clearColumnPreferencesForIndex(query.selectedIndex);
+                const columnsToReset = schemaColumns.length > 0 ? schemaColumns : availableColumns;
+                setSelectedColumns(columnsToReset);
+              }
+            }}
+            footerMessage="Selected columns will be saved for this index"
+          />
+        </QueryResultsSection>
       </Grid>
     </Box>
   );

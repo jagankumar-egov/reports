@@ -7,7 +7,6 @@ import {
   CardHeader,
   Typography,
   Grid,
-  Button,
   Chip,
   Alert,
   IconButton,
@@ -19,29 +18,21 @@ import {
   ListItemText,
 } from '@mui/material';
 import {
-  PlayArrow as ExecuteIcon,
   Clear as ClearIcon,
   FilterList as FilterIcon,
-  Refresh as RefreshIcon,
   ContentCopy as CopyIcon,
   Link as LinkIcon,
   CheckCircle as SuccessIcon,
 } from '@mui/icons-material';
 
-// Import existing components
 import {
-  QueryInput,
-  DataTable,
-  IndexSelector,
+  QueryExecutionCard,
+  QueryResultsSection,
   ExportActions,
-  ErrorDisplay,
-  AggregationsDisplay,
-  LoadingSpinner,
-  ShareableLink,
 } from '@/components/common';
 
-import { DirectQueryRequest, DirectQueryResponse } from '@/types';
-import { directQueryAPI } from '@/services/api';
+import { useElasticsearchQuery } from '@/hooks/useElasticsearchQuery';
+import { useElasticsearchPagination } from '@/hooks/useElasticsearchPagination';
 
 interface DefaultFilter {
   field: string;
@@ -54,21 +45,10 @@ interface DefaultFilter {
 const AutoQuery: React.FC = () => {
   const [searchParams, setSearchParams] = useSearchParams();
   
-  // State management
-  const [selectedIndex, setSelectedIndex] = useState<string>('');
-  const [queryText, setQueryText] = useState<string>('');
-  const [result, setResult] = useState<DirectQueryResponse | null>(null);
-  const [loading, setLoading] = useState<boolean>(false);
-  const [error, setError] = useState<string | null>(null);
-  const [availableIndexes, setAvailableIndexes] = useState<string[]>([]);
-  const [indexesLoading, setIndexesLoading] = useState<boolean>(true);
+  // URL state
   const [appliedFilters, setAppliedFilters] = useState<DefaultFilter[]>([]);
   const [urlCopied, setUrlCopied] = useState(false);
   const [autoExecuted, setAutoExecuted] = useState(false);
-  
-  // Table pagination state
-  const [page, setPage] = useState(0);
-  const [rowsPerPage, setRowsPerPage] = useState(10);
 
   // Parse URL parameters for pagination
   const urlFrom = useMemo(() => {
@@ -80,6 +60,15 @@ const AutoQuery: React.FC = () => {
     const size = searchParams.get('size');
     return size ? parseInt(size) : 10;
   }, [searchParams]);
+
+  // Use shared hooks
+  const query = useElasticsearchQuery({
+    onResult: () => {
+      pagination.resetPagination();
+    },
+  });
+
+  const pagination = useElasticsearchPagination(10);
 
   // Parse default filters from URL query parameters
   const defaultFilters = useMemo(() => {
@@ -264,7 +253,7 @@ const AutoQuery: React.FC = () => {
       }
     });
 
-    const query = {
+    const queryObj = {
       query: {
         bool: {
           must: mustClauses.length > 0 ? mustClauses : [{ match_all: {} }]
@@ -277,109 +266,57 @@ const AutoQuery: React.FC = () => {
       ]
     };
 
-    return JSON.stringify(query, null, 2);
+    return JSON.stringify(queryObj, null, 2);
   }, [searchParams, urlSize, urlFrom]);
 
-  // Load available indexes on mount
+  // Set index from URL
   useEffect(() => {
-    const loadIndexes = async () => {
-      try {
-        setIndexesLoading(true);
-        const indexes = await directQueryAPI.getIndexes();
-        setAvailableIndexes(indexes);
-        
-        // Check if index is specified in URL
-        const urlIndex = searchParams.get('index');
-        if (urlIndex && indexes.includes(urlIndex)) {
-          setSelectedIndex(urlIndex);
-        } else if (indexes.length > 0 && !selectedIndex) {
-          setSelectedIndex(indexes[0]);
-        }
-      } catch (err) {
-        setError(`Failed to load indexes: ${err instanceof Error ? err.message : String(err)}`);
-      } finally {
-        setIndexesLoading(false);
-      }
-    };
-
-    loadIndexes();
-  }, [searchParams]);
+    const urlIndex = searchParams.get('index');
+    if (urlIndex && query.availableIndexes.includes(urlIndex)) {
+      query.setSelectedIndex(urlIndex);
+    }
+  }, [searchParams, query.availableIndexes]);
 
   // Apply filters and generate query when URL changes
   useEffect(() => {
     setAppliedFilters(defaultFilters);
     const generatedQuery = generateFilteredQuery(defaultFilters);
-    setQueryText(generatedQuery);
-  }, [defaultFilters, generateFilteredQuery]);
+    query.setQueryText(generatedQuery);
+  }, [defaultFilters, generateFilteredQuery, query]);
 
-  // Execute query
-  const executeQuery = useCallback(async () => {
-    if (!selectedIndex) {
-      setError('Please select an index');
-      return;
-    }
-
-    if (!queryText.trim()) {
-      setError('Please enter a query');
-      return;
-    }
-
-    try {
-      setLoading(true);
-      setError(null);
-      
-      // Parse the query
-      let parsedQuery;
-      try {
-        parsedQuery = JSON.parse(queryText);
-      } catch (parseError) {
-        throw new Error(`Invalid JSON query: ${parseError instanceof Error ? parseError.message : String(parseError)}`);
-      }
-
-      // Extract from and size from the parsed query if they exist
-      const queryFrom = parsedQuery.from !== undefined ? parsedQuery.from : urlFrom;
-      const querySize = parsedQuery.size !== undefined ? parsedQuery.size : urlSize;
-      
-      const request: DirectQueryRequest = {
-        index: selectedIndex,
-        query: parsedQuery,
-        from: queryFrom,
-        size: querySize,
-      };
-
-      const response = await directQueryAPI.execute(request);
-      setResult(response);
-      setError(null);
-    } catch (err) {
-      if (err && typeof err === 'object' && 'message' in err) {
-        setError(String(err.message));
-      } else {
-        setError('An error occurred while executing the query');
-      }
-      setResult(null);
-    } finally {
-      setLoading(false);
-    }
-  }, [selectedIndex, queryText, urlFrom, urlSize]);
-
-  // Auto-execute query if requested via URL
+  // Auto-execute query if requested via URL or if there are filters applied
   useEffect(() => {
+    const shouldAutoExecute = 
+      (searchParams.get('autoExecute') === 'true') || 
+      (appliedFilters.length > 0) ||
+      (searchParams.get('query')); // Execute if there's a direct query parameter
+      
     if (
-      searchParams.get('autoExecute') === 'true' && 
-      selectedIndex && 
-      queryText && 
-      !loading &&
-      !indexesLoading &&
+      shouldAutoExecute && 
+      query.selectedIndex && 
+      query.queryText && 
+      !query.loading &&
+      !query.indexesLoading &&
       !autoExecuted
     ) {
       setAutoExecuted(true);
       // Execute after a small delay to ensure everything is set up
       const timer = setTimeout(() => {
-        executeQuery();
+        handleExecute();
       }, 500);
       return () => clearTimeout(timer);
     }
-  }, [selectedIndex, queryText, searchParams, indexesLoading, loading, autoExecuted, executeQuery]);
+  }, [query.selectedIndex, query.queryText, appliedFilters, searchParams, query.indexesLoading, query.loading, autoExecuted]);
+
+  // Enhanced execute function
+  const handleExecute = useCallback(async () => {
+    await query.executeQuery(urlFrom, urlSize);
+  }, [query, urlFrom, urlSize]);
+
+  // Handle query text change
+  const handleQueryChange = useCallback((event: React.ChangeEvent<HTMLTextAreaElement>) => {
+    query.setQueryText(event.target.value);
+  }, [query]);
 
   // Remove a filter
   const removeFilter = (indexToRemove: number) => {
@@ -420,89 +357,15 @@ const AutoQuery: React.FC = () => {
 
   // Clear results
   const handleClear = () => {
-    setResult(null);
-    setError(null);
+    query.clearResults();
     setAutoExecuted(false);
-    setPage(0);
+    pagination.resetPagination();
   };
 
-  // Handle pagination
-  const handleChangePage = useCallback((_event: unknown, newPage: number) => {
-    setPage(newPage);
-  }, []);
-
-  const handleChangeRowsPerPage = useCallback((event: React.ChangeEvent<HTMLInputElement>) => {
-    setRowsPerPage(parseInt(event.target.value, 10));
-    setPage(0);
-  }, []);
-
-  // Format result data for table display
-  const formatResultsForTable = useCallback((hits: any[]) => {
-    if (!hits || hits.length === 0) return { columns: [], rows: [] };
-
-    // Get all unique keys from all documents
-    const allKeys = new Set<string>();
-    hits.forEach(hit => {
-      if (hit._source) {
-        const extractKeys = (obj: any, prefix = '') => {
-          Object.keys(obj).forEach(key => {
-            const fullKey = prefix ? `${prefix}.${key}` : key;
-            if (obj[key] && typeof obj[key] === 'object' && !Array.isArray(obj[key])) {
-              extractKeys(obj[key], fullKey);
-            } else {
-              allKeys.add(fullKey);
-            }
-          });
-        };
-        extractKeys(hit._source);
-      }
-    });
-
-    // Create columns from current result
-    const resultColumns = ['_id', '_score', ...Array.from(allKeys).sort()];
-    
-    // Create rows
-    const rows = hits.map((hit, index) => {
-      const row: any = {
-        id: `${hit._id}-${index}`,
-        _id: hit._id,
-        _score: hit._score,
-      };
-
-      // Flatten the _source object
-      const flattenObject = (obj: any, prefix = '') => {
-        Object.keys(obj).forEach(key => {
-          const fullKey = prefix ? `${prefix}.${key}` : key;
-          if (obj[key] && typeof obj[key] === 'object' && !Array.isArray(obj[key])) {
-            flattenObject(obj[key], fullKey);
-          } else {
-            row[fullKey] = obj[key];
-          }
-        });
-      };
-
-      if (hit._source) {
-        flattenObject(hit._source);
-      }
-
-      return row;
-    });
-
-    return { columns: resultColumns, rows };
-  }, []);
-
-  // Get paginated data
-  const getPaginatedHits = useCallback(() => {
-    if (!result?.hits?.hits) return [];
-    const start = page * rowsPerPage;
-    const end = start + rowsPerPage;
-    return result.hits.hits.slice(start, end);
-  }, [result, page, rowsPerPage]);
-
-  const { columns, rows } = result ? formatResultsForTable(getPaginatedHits()) : { columns: [], rows: [] };
-  const totalHits = typeof result?.hits?.total === 'number' 
-    ? result.hits.total 
-    : result?.hits?.total?.value || 0;
+  const { columns, rows } = query.result ? query.formatResultsForTable(pagination.getPaginatedHits(query.result)) : { columns: [], rows: [] };
+  const totalHits = typeof query.result?.hits?.total === 'number' 
+    ? query.result.hits.total 
+    : query.result?.hits?.total?.value || 0;
 
   return (
     <Box>
@@ -585,116 +448,45 @@ const AutoQuery: React.FC = () => {
       <Grid container spacing={3}>
         {/* Query Configuration */}
         <Grid item xs={12}>
-          <Card elevation={2}>
-            <CardHeader 
-              title="Query Configuration"
-            />
-            <CardContent>
-              <Grid container spacing={2} sx={{ mb: 2 }}>
-                <Grid item xs={12} md={6}>
-                  <IndexSelector
-                    selectedIndex={selectedIndex}
-                    availableIndexes={availableIndexes}
-                    onIndexChange={setSelectedIndex}
-                    loading={indexesLoading}
-                  />
-                </Grid>
-                <Grid item xs={12} md={6} sx={{ display: 'flex', alignItems: 'flex-end', gap: 1 }}>
-                  <Button
-                    variant="contained"
-                    startIcon={<ExecuteIcon />}
-                    onClick={executeQuery}
-                    disabled={loading || !selectedIndex || !queryText}
-                  >
-                    {loading ? 'Executing...' : 'Execute Query'}
-                  </Button>
-                  <Button
-                    variant="outlined"
-                    startIcon={<ClearIcon />}
-                    onClick={handleClear}
-                    disabled={loading}
-                  >
-                    Clear Results
-                  </Button>
-                  <ShareableLink
-                    index={selectedIndex}
-                    query={queryText}
-                    from={urlFrom}
-                    size={urlSize}
-                    autoExecute={true}
-                    buttonVariant="outlined"
-                  />
-                  {result && (
-                    <ExportActions
-                      data={result}
-                      filename={`auto-query-${selectedIndex}`}
-                    />
-                  )}
-                </Grid>
-              </Grid>
-
-              <Divider sx={{ my: 2 }} />
-
-              <Typography variant="subtitle2" gutterBottom>
-                Generated Query:
-              </Typography>
-              <QueryInput
-                value={queryText}
-                onChange={setQueryText}
-                error={error}
-                placeholder="Query will be generated automatically from URL parameters"
+          <QueryExecutionCard
+            selectedIndex={query.selectedIndex}
+            availableIndexes={query.availableIndexes}
+            onIndexChange={query.setSelectedIndex}
+            indexesLoading={query.indexesLoading}
+            queryText={query.queryText}
+            onQueryChange={handleQueryChange}
+            onExecute={handleExecute}
+            onClear={handleClear}
+            loading={query.loading}
+            showFromSize={false}
+            title="Generated Query Configuration"
+            showQueryGuidelines={false}
+          >
+            {query.result && (
+              <ExportActions
+                data={query.result}
+                filename={`auto-query-${query.selectedIndex}`}
               />
-            </CardContent>
-          </Card>
+            )}
+          </QueryExecutionCard>
         </Grid>
 
-        {/* Loading State */}
-        {loading && (
-          <Grid item xs={12}>
-            <LoadingSpinner message="Executing query..." />
-          </Grid>
-        )}
-
-        {/* Error Display */}
-        {error && !loading && (
-          <Grid item xs={12}>
-            <ErrorDisplay
-              error={error}
-              onRetry={executeQuery}
-              context="Query Execution"
-            />
-          </Grid>
-        )}
-
-        {/* Results */}
-        {result && !loading && !error && (
-          <>
-            {/* Aggregations */}
-            {result.aggregations && Object.keys(result.aggregations).length > 0 && (
-              <Grid item xs={12}>
-                <AggregationsDisplay 
-                  aggregations={result.aggregations}
-                  title="Query Aggregations"
-                />
-              </Grid>
-            )}
-
-            {/* Data Table */}
-            <Grid item xs={12}>
-              <DataTable
-                columns={columns}
-                rows={rows}
-                page={page}
-                rowsPerPage={rowsPerPage}
-                totalCount={totalHits}
-                onPageChange={handleChangePage}
-                onRowsPerPageChange={handleChangeRowsPerPage}
-                loading={loading}
-                emptyMessage="No results found"
-              />
-            </Grid>
-          </>
-        )}
+        {/* Results Section */}
+        <QueryResultsSection
+          result={query.result}
+          error={query.error}
+          loading={query.loading}
+          columns={columns}
+          rows={rows}
+          page={pagination.page}
+          rowsPerPage={pagination.rowsPerPage}
+          totalHits={totalHits}
+          onPageChange={pagination.handleChangePage}
+          onRowsPerPageChange={pagination.handleChangeRowsPerPage}
+          onRetryError={handleExecute}
+          selectedIndex={query.selectedIndex}
+          emptyMessage="No results found"
+        />
       </Grid>
     </Box>
   );

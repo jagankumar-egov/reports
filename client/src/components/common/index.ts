@@ -9,5 +9,7 @@ export { default as AggregationsDisplay } from './AggregationsDisplay';
 export { default as ErrorBoundary } from './ErrorBoundary';
 export { default as LoadingSpinner } from './LoadingSpinner';
 export { default as ShareableLink } from './ShareableLink';
+export { default as QueryExecutionCard } from './QueryExecutionCard';
+export { default as QueryResultsSection } from './QueryResultsSection';
 
 export type { TableRow, TableColumn } from './DataTable';
