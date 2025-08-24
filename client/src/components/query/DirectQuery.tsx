@@ -32,6 +32,10 @@ import {
   ListItemButton,
   ListItemIcon,
   ListItemText,
+  Tabs,
+  Tab,
+  Collapse,
+  IconButton,
 } from '@mui/material';
 import {
   PlayArrow as ExecuteIcon,
@@ -41,6 +45,10 @@ import {
   TableView as TableIcon,
   Download as DownloadIcon,
   ViewColumn as ColumnIcon,
+  Help as HelpIcon,
+  ExpandMore as ExpandMoreIcon,
+  ExpandLess as ExpandLessIcon,
+  ContentCopy as CopyIcon,
 } from '@mui/icons-material';
 
 import { DirectQueryRequest, DirectQueryResponse, ElasticsearchHit } from '@/types';
@@ -79,6 +87,10 @@ const DirectQuery: React.FC = () => {
   const [lastQueryWasFiltered, setLastQueryWasFiltered] = useState<boolean>(false);
   const [columnFilterOpen, setColumnFilterOpen] = useState(false);
   const [columnAnchorEl, setColumnAnchorEl] = useState<HTMLButtonElement | null>(null);
+  
+  // Guidelines panel state
+  const [guidelinesOpen, setGuidelinesOpen] = useState(false);
+  const [selectedTab, setSelectedTab] = useState(0);
 
   // Load available indexes on mount
   useEffect(() => {
@@ -90,8 +102,22 @@ const DirectQuery: React.FC = () => {
         if (indexes.length > 0 && !selectedIndex) {
           setSelectedIndex(indexes[0]);
         }
-      } catch (err) {
-        setError(`Failed to load indexes: ${err instanceof Error ? err.message : String(err)}`);
+      } catch (err: any) {
+        // Handle structured API errors for index loading
+        let errorMessage = 'Failed to load indexes';
+        
+        if (err && typeof err === 'object' && err.message) {
+          errorMessage = `Failed to load indexes: ${err.message}`;
+          if (err.code) {
+            errorMessage = `Failed to load indexes: ${err.code} - ${err.message}`;
+          }
+        } else if (err instanceof Error) {
+          errorMessage = `Failed to load indexes: ${err.message}`;
+        } else {
+          errorMessage = `Failed to load indexes: ${String(err)}`;
+        }
+        
+        setError(errorMessage);
       } finally {
         setIndexesLoading(false);
       }
@@ -225,8 +251,49 @@ const DirectQuery: React.FC = () => {
       setLastQueryWasFiltered(queryUsesFiltering);
       setPage(0); // Reset to first page when new results come in
       
-    } catch (err) {
-      setError(err instanceof Error ? err.message : String(err));
+    } catch (err: any) {
+      // Handle structured API errors
+      let errorMessage = 'An unknown error occurred';
+      
+      if (err && typeof err === 'object') {
+        if (err.message) {
+          errorMessage = err.message;
+          
+          // Add more context for specific errors
+          if (err.code) {
+            errorMessage = `${err.code}: ${err.message}`;
+          }
+          
+          // For Elasticsearch errors, try to extract the root cause
+          if (err.details && err.details.includes('index_not_found_exception')) {
+            const indexMatch = err.details.match(/no such index \[([^\]]+)\]/);
+            if (indexMatch) {
+              errorMessage = `Index '${indexMatch[1]}' not found. Please check if the index exists and try again.`;
+            }
+          } else if (err.details && err.details.includes('parsing_exception')) {
+            errorMessage = `Query parsing error: ${err.message}. Please check your Elasticsearch query syntax.`;
+          } else if (err.details && err.details.includes('search_phase_execution_exception')) {
+            errorMessage = `Search execution error: ${err.message}. There may be an issue with the query or index mapping.`;
+          } else if (err.code === 'ACCESS_DENIED') {
+            errorMessage = `Access denied: ${err.message}. Please check if you have permission to access this index.`;
+          } else if (err.code === 'INTERNAL_ERROR' && err.details) {
+            // Try to extract meaningful error from internal errors
+            if (err.details.includes('connection')) {
+              errorMessage = `Connection error: Unable to connect to Elasticsearch. Please try again.`;
+            } else if (err.details.includes('timeout')) {
+              errorMessage = `Request timeout: The query took too long to execute. Try simplifying your query or increasing the timeout.`;
+            }
+          }
+        } else if (err.code && err.status) {
+          errorMessage = `${err.code} (${err.status})`;
+        }
+      } else if (err instanceof Error) {
+        errorMessage = err.message;
+      } else {
+        errorMessage = String(err);
+      }
+      
+      setError(errorMessage);
       setResult(null);
     } finally {
       setLoading(false);
@@ -542,8 +609,25 @@ const DirectQuery: React.FC = () => {
         {/* Error Display */}
         {error && (
           <Grid item xs={12}>
-            <Alert severity="error" onClose={() => setError(null)}>
-              {error}
+            <Alert 
+              severity="error" 
+              onClose={() => setError(null)}
+              sx={{ 
+                '& .MuiAlert-message': { 
+                  fontSize: '0.95rem',
+                  lineHeight: 1.5,
+                  whiteSpace: 'pre-wrap'
+                }
+              }}
+            >
+              <Box>
+                <Typography variant="body1" component="div" sx={{ fontWeight: 'medium', mb: 0.5 }}>
+                  Query Execution Failed
+                </Typography>
+                <Typography variant="body2" component="div">
+                  {error}
+                </Typography>
+              </Box>
             </Alert>
           </Grid>
         )}
