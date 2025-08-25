@@ -48,6 +48,14 @@ const navItems: NavItem[] = [
     phase: 1,
   },
   {
+    id: 'direct-query-2',
+    label: 'Direct ES Query 2',
+    icon: <CodeIcon />,
+    path: '/direct-query-2',
+    available: true,
+    phase: 1,
+  },
+  {
     id: 'query-builder',
     label: 'Query Builder',
     icon: <BuildIcon />,

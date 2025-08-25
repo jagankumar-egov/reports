@@ -1,0 +1,528 @@
+{
+  "version": "1.0.0",
+  "lastUpdated": "2025-01-25T10:00:00Z",
+  "globalSettings": {
+    "defaultQuerySize": 50,
+    "maxQuerySize": 1000,
+    "defaultDateField": "@timestamp",
+    "commonFilters": [
+      {
+        "name": "recent",
+        "description": "Filter to recent records (last 30 days)",
+        "field": "@timestamp",
+        "operator": "range",
+        "values": ["now-30d", "now"],
+        "isDefault": false
+      },
+      {
+        "name": "active",
+        "description": "Filter to active/non-deleted records",
+        "field": "status",
+        "operator": "exists",
+        "isDefault": true
+      }
+    ]
+  },
+  "indexes": {
+    "project-index-v1": {
+      "name": "project-index-v1",
+      "description": "Health project data including implementation details, status, and outcomes",
+      "tags": ["health", "projects", "implementation", "outcomes", "monitoring"],
+      "category": "health-data",
+      "priority": 9,
+      "dateFields": ["Data.createdDate", "Data.lastUpdated", "@timestamp"],
+      "primaryFields": ["Data.projectName", "Data.status", "Data.implementingAgency", "Data.location"],
+      "businessContext": {
+        "domain": "Healthcare Project Management",
+        "dataSource": "DHIS2 Health Project Tracker",
+        "updateFrequency": "Daily",
+        "recordCount": 15000
+      },
+      "queryPatterns": [
+        {
+          "name": "project-status-filter",
+          "description": "Filter projects by their implementation status",
+          "keywords": ["status", "completed", "ongoing", "failed", "pending"],
+          "template": {
+            "bool": {
+              "must": [
+                {
+                  "term": {
+                    "Data.status.keyword": "{{status_value}}"
+                  }
+                }
+              ]
+            }
+          },
+          "requiredFields": ["Data.status"],
+          "examples": [
+            "show me completed projects",
+            "find all failed health projects",
+            "list ongoing implementations"
+          ]
+        },
+        {
+          "name": "location-based-search",
+          "description": "Search projects by geographical location",
+          "keywords": ["location", "district", "state", "region", "area"],
+          "template": {
+            "bool": {
+              "should": [
+                {
+                  "match": {
+                    "Data.location.district": "{{location_value}}"
+                  }
+                },
+                {
+                  "match": {
+                    "Data.location.state": "{{location_value}}"
+                  }
+                }
+              ]
+            }
+          },
+          "requiredFields": ["Data.location"],
+          "examples": [
+            "projects in Karnataka",
+            "health initiatives in Bangalore district",
+            "show me projects from southern region"
+          ]
+        }
+      ],
+      "fields": {
+        "Data.projectId": {
+          "name": "Data.projectId",
+          "type": "keyword",
+          "description": "Unique identifier for the health project",
+          "aliases": ["project id", "id", "project number", "identifier"],
+          "examples": ["PROJ-2024-001", "HP-KAR-001", "HEALTH-001"],
+          "isSearchable": true,
+          "isFilterable": true,
+          "isAggregatable": true,
+          "businessMeaning": "System-generated unique identifier for tracking projects",
+          "tags": ["identifier", "primary-key"]
+        },
+        "Data.projectName": {
+          "name": "Data.projectName",
+          "type": "text",
+          "description": "Full name of the health project or initiative",
+          "aliases": ["project name", "title", "project title", "name"],
+          "examples": ["Maternal Health Improvement Initiative", "Rural Healthcare Access Program", "COVID-19 Vaccination Drive"],
+          "isSearchable": true,
+          "isFilterable": false,
+          "isAggregatable": false,
+          "businessMeaning": "Official name of the health project as registered in DHIS2",
+          "tags": ["name", "searchable", "primary-info"]
+        },
+        "Data.status": {
+          "name": "Data.status",
+          "type": "keyword",
+          "description": "Current implementation status of the project",
+          "aliases": ["status", "state", "condition", "progress", "phase"],
+          "examples": ["Completed", "Ongoing", "Failed", "Pending", "Cancelled"],
+          "isSearchable": true,
+          "isFilterable": true,
+          "isAggregatable": true,
+          "businessMeaning": "Indicates the current state of project implementation",
+          "tags": ["status", "categorical", "filter"],
+          "validValues": ["Completed", "Ongoing", "Failed", "Pending", "Cancelled", "On Hold"]
+        },
+        "Data.implementingAgency": {
+          "name": "Data.implementingAgency",
+          "type": "keyword",
+          "description": "Organization or agency responsible for project implementation",
+          "aliases": ["implementing agency", "agency", "organization", "implementer", "responsible party"],
+          "examples": ["Department of Health", "WHO", "UNICEF", "Local NGO", "State Health Mission"],
+          "isSearchable": true,
+          "isFilterable": true,
+          "isAggregatable": true,
+          "businessMeaning": "The primary organization accountable for executing the project",
+          "tags": ["organization", "responsibility", "categorical"]
+        },
+        "Data.budget": {
+          "name": "Data.budget",
+          "type": "number",
+          "description": "Total budget allocated for the project in USD",
+          "aliases": ["budget", "funding", "cost", "allocation", "money"],
+          "examples": ["50000", "250000", "1000000"],
+          "isSearchable": false,
+          "isFilterable": true,
+          "isAggregatable": true,
+          "businessMeaning": "Financial resources allocated for project completion",
+          "tags": ["financial", "numeric", "aggregatable"]
+        },
+        "Data.location": {
+          "name": "Data.location",
+          "type": "object",
+          "description": "Geographical information about project implementation area",
+          "aliases": ["location", "place", "geography", "area", "region"],
+          "examples": [],
+          "isSearchable": true,
+          "isFilterable": true,
+          "isAggregatable": false,
+          "businessMeaning": "Geographic scope and administrative boundaries of project implementation",
+          "tags": ["location", "geographical", "nested"],
+          "nestedFields": {
+            "state": {
+              "name": "Data.location.state",
+              "type": "keyword",
+              "description": "State or province where project is implemented",
+              "aliases": ["state", "province"],
+              "examples": ["Karnataka", "Tamil Nadu", "Kerala"],
+              "isSearchable": true,
+              "isFilterable": true,
+              "isAggregatable": true,
+              "businessMeaning": "Administrative state/province boundary",
+              "tags": ["administrative", "geography"]
+            },
+            "district": {
+              "name": "Data.location.district",
+              "type": "keyword",
+              "description": "District or county within the state",
+              "aliases": ["district", "county"],
+              "examples": ["Bangalore", "Mysore", "Hassan"],
+              "isSearchable": true,
+              "isFilterable": true,
+              "isAggregatable": true,
+              "businessMeaning": "Sub-state administrative district",
+              "tags": ["administrative", "geography"]
+            }
+          }
+        },
+        "Data.targetPopulation": {
+          "name": "Data.targetPopulation",
+          "type": "number",
+          "description": "Number of people the project aims to serve",
+          "aliases": ["target population", "beneficiaries", "target group", "population", "recipients"],
+          "examples": ["1000", "50000", "250000"],
+          "isSearchable": false,
+          "isFilterable": true,
+          "isAggregatable": true,
+          "businessMeaning": "Estimated number of direct beneficiaries the project will impact",
+          "tags": ["population", "numeric", "impact"]
+        },
+        "Data.healthCategory": {
+          "name": "Data.healthCategory",
+          "type": "keyword",
+          "description": "Primary health domain or category of the project",
+          "aliases": ["health category", "domain", "health area", "focus area", "specialty"],
+          "examples": ["Maternal Health", "Child Health", "Infectious Disease", "Mental Health", "Nutrition"],
+          "isSearchable": true,
+          "isFilterable": true,
+          "isAggregatable": true,
+          "businessMeaning": "The primary health sector or medical domain this project addresses",
+          "tags": ["category", "health", "classification"],
+          "validValues": ["Maternal Health", "Child Health", "Infectious Disease", "Mental Health", "Nutrition", "Primary Care", "Emergency Care", "Preventive Care"]
+        },
+        "Data.createdDate": {
+          "name": "Data.createdDate",
+          "type": "date",
+          "description": "Date when the project was created in the system",
+          "aliases": ["created date", "creation date", "start date", "registered date"],
+          "examples": ["2024-01-15", "2023-12-01", "2024-03-20"],
+          "isSearchable": false,
+          "isFilterable": true,
+          "isAggregatable": true,
+          "businessMeaning": "When the project was first registered in the tracking system",
+          "tags": ["date", "timestamp", "creation"],
+          "dateFormat": "yyyy-MM-dd"
+        },
+        "Data.lastUpdated": {
+          "name": "Data.lastUpdated",
+          "type": "date",
+          "description": "Last modification timestamp for project data",
+          "aliases": ["last updated", "modified date", "updated date", "last changed"],
+          "examples": ["2024-01-25T10:30:00Z", "2024-01-20T14:15:00Z"],
+          "isSearchable": false,
+          "isFilterable": true,
+          "isAggregatable": true,
+          "businessMeaning": "Most recent time when project information was updated",
+          "tags": ["date", "timestamp", "modification"],
+          "dateFormat": "yyyy-MM-dd'T'HH:mm:ss'Z'"
+        }
+      }
+    },
+    "household-index-v1": {
+      "name": "household-index-v1",
+      "description": "Household demographic and socioeconomic data for health program targeting",
+      "tags": ["household", "demographics", "socioeconomic", "population", "census"],
+      "category": "demographic-data",
+      "priority": 7,
+      "dateFields": ["Data.surveyDate", "@timestamp"],
+      "primaryFields": ["Data.householdId", "Data.headOfHousehold", "Data.location", "Data.economicStatus"],
+      "businessContext": {
+        "domain": "Demographic & Socioeconomic Analysis",
+        "dataSource": "National Household Survey",
+        "updateFrequency": "Annual",
+        "recordCount": 500000
+      },
+      "queryPatterns": [
+        {
+          "name": "economic-status-analysis",
+          "description": "Analyze households by economic status",
+          "keywords": ["economic status", "income", "poverty", "wealth", "bpl", "apl"],
+          "template": {
+            "terms": {
+              "Data.economicStatus.keyword": ["{{status_values}}"]
+            }
+          },
+          "requiredFields": ["Data.economicStatus"],
+          "examples": [
+            "show me BPL households",
+            "find wealthy families",
+            "households below poverty line"
+          ]
+        }
+      ],
+      "fields": {
+        "Data.householdId": {
+          "name": "Data.householdId",
+          "type": "keyword",
+          "description": "Unique identifier for each household",
+          "aliases": ["household id", "family id", "household number"],
+          "examples": ["HH-2024-001", "FAM-KAR-001"],
+          "isSearchable": true,
+          "isFilterable": true,
+          "isAggregatable": true,
+          "businessMeaning": "System-generated unique identifier for each household unit",
+          "tags": ["identifier", "primary-key"]
+        },
+        "Data.headOfHousehold": {
+          "name": "Data.headOfHousehold",
+          "type": "text",
+          "description": "Name of the household head",
+          "aliases": ["head of household", "family head", "household leader"],
+          "examples": ["Ramesh Kumar", "Priya Sharma", "Manjunath Reddy"],
+          "isSearchable": true,
+          "isFilterable": false,
+          "isAggregatable": false,
+          "businessMeaning": "Primary decision-maker and responsible person in the household",
+          "tags": ["name", "person", "searchable"]
+        },
+        "Data.memberCount": {
+          "name": "Data.memberCount",
+          "type": "number",
+          "description": "Total number of members in the household",
+          "aliases": ["members", "family size", "household size", "people count"],
+          "examples": ["3", "5", "8"],
+          "isSearchable": false,
+          "isFilterable": true,
+          "isAggregatable": true,
+          "businessMeaning": "Total count of individuals living in the household",
+          "tags": ["numeric", "count", "demographic"]
+        },
+        "Data.economicStatus": {
+          "name": "Data.economicStatus",
+          "type": "keyword",
+          "description": "Economic classification of the household",
+          "aliases": ["economic status", "poverty status", "income category", "economic class"],
+          "examples": ["BPL", "APL", "Middle Class", "Upper Middle Class"],
+          "isSearchable": true,
+          "isFilterable": true,
+          "isAggregatable": true,
+          "businessMeaning": "Government classification of household economic status for program eligibility",
+          "tags": ["economic", "classification", "categorical"],
+          "validValues": ["BPL", "APL", "Middle Class", "Upper Middle Class", "Upper Class"]
+        },
+        "Data.location": {
+          "name": "Data.location",
+          "type": "object",
+          "description": "Geographical location of the household",
+          "aliases": ["location", "address", "place"],
+          "examples": [],
+          "isSearchable": true,
+          "isFilterable": true,
+          "isAggregatable": false,
+          "businessMeaning": "Physical location and administrative boundaries where household resides",
+          "tags": ["location", "geographical", "nested"],
+          "nestedFields": {
+            "state": {
+              "name": "Data.location.state",
+              "type": "keyword",
+              "description": "State where household is located",
+              "aliases": ["state"],
+              "examples": ["Karnataka", "Tamil Nadu"],
+              "isSearchable": true,
+              "isFilterable": true,
+              "isAggregatable": true,
+              "businessMeaning": "Administrative state boundary",
+              "tags": ["administrative", "geography"]
+            },
+            "district": {
+              "name": "Data.location.district",
+              "type": "keyword",
+              "description": "District within the state",
+              "aliases": ["district"],
+              "examples": ["Bangalore", "Mysore"],
+              "isSearchable": true,
+              "isFilterable": true,
+              "isAggregatable": true,
+              "businessMeaning": "Sub-state administrative district",
+              "tags": ["administrative", "geography"]
+            },
+            "village": {
+              "name": "Data.location.village",
+              "type": "keyword",
+              "description": "Village or locality name",
+              "aliases": ["village", "locality", "area"],
+              "examples": ["Koramangala", "Whitefield", "Malleswaram"],
+              "isSearchable": true,
+              "isFilterable": true,
+              "isAggregatable": true,
+              "businessMeaning": "Smallest administrative unit or locality",
+              "tags": ["administrative", "geography", "local"]
+            }
+          }
+        }
+      }
+    },
+    "project-task-index-v1": {
+      "name": "project-task-index-v1",
+      "description": "Individual tasks and activities within health projects with progress tracking",
+      "tags": ["tasks", "activities", "project-management", "progress", "milestones"],
+      "category": "project-management",
+      "priority": 6,
+      "dateFields": ["Data.startDate", "Data.dueDate", "Data.completedDate"],
+      "primaryFields": ["Data.taskName", "Data.projectId", "Data.assignee", "Data.status"],
+      "businessContext": {
+        "domain": "Project Task Management",
+        "dataSource": "Project Management System",
+        "updateFrequency": "Real-time",
+        "recordCount": 75000
+      },
+      "queryPatterns": [
+        {
+          "name": "overdue-tasks",
+          "description": "Find tasks that are past their due date",
+          "keywords": ["overdue", "delayed", "late", "past due"],
+          "template": {
+            "bool": {
+              "must": [
+                {
+                  "range": {
+                    "Data.dueDate": {
+                      "lt": "now"
+                    }
+                  }
+                },
+                {
+                  "terms": {
+                    "Data.status.keyword": ["In Progress", "Not Started"]
+                  }
+                }
+              ]
+            }
+          },
+          "requiredFields": ["Data.dueDate", "Data.status"],
+          "examples": [
+            "show me overdue tasks",
+            "find delayed activities",
+            "tasks past their deadline"
+          ]
+        }
+      ],
+      "fields": {
+        "Data.taskId": {
+          "name": "Data.taskId",
+          "type": "keyword",
+          "description": "Unique identifier for the task",
+          "aliases": ["task id", "activity id", "task number"],
+          "examples": ["TASK-001", "ACT-2024-001"],
+          "isSearchable": true,
+          "isFilterable": true,
+          "isAggregatable": true,
+          "businessMeaning": "System-generated unique identifier for project tasks",
+          "tags": ["identifier", "primary-key"]
+        },
+        "Data.taskName": {
+          "name": "Data.taskName",
+          "type": "text",
+          "description": "Name or title of the task",
+          "aliases": ["task name", "activity name", "task title"],
+          "examples": ["Conduct baseline survey", "Procure medical equipment", "Train healthcare workers"],
+          "isSearchable": true,
+          "isFilterable": false,
+          "isAggregatable": false,
+          "businessMeaning": "Descriptive name of the project activity or task",
+          "tags": ["name", "searchable", "description"]
+        },
+        "Data.projectId": {
+          "name": "Data.projectId",
+          "type": "keyword",
+          "description": "Reference to the parent project",
+          "aliases": ["project id", "parent project"],
+          "examples": ["PROJ-2024-001"],
+          "isSearchable": true,
+          "isFilterable": true,
+          "isAggregatable": true,
+          "businessMeaning": "Links task to its parent health project",
+          "tags": ["reference", "relationship", "foreign-key"]
+        },
+        "Data.status": {
+          "name": "Data.status",
+          "type": "keyword",
+          "description": "Current status of task completion",
+          "aliases": ["status", "progress", "state"],
+          "examples": ["Not Started", "In Progress", "Completed", "On Hold"],
+          "isSearchable": true,
+          "isFilterable": true,
+          "isAggregatable": true,
+          "businessMeaning": "Current state of task execution",
+          "tags": ["status", "categorical", "progress"],
+          "validValues": ["Not Started", "In Progress", "Completed", "On Hold", "Cancelled"]
+        },
+        "Data.assignee": {
+          "name": "Data.assignee",
+          "type": "keyword",
+          "description": "Person or team assigned to the task",
+          "aliases": ["assignee", "responsible person", "assigned to"],
+          "examples": ["Dr. Sharma", "Nursing Team", "Data Collection Team"],
+          "isSearchable": true,
+          "isFilterable": true,
+          "isAggregatable": true,
+          "businessMeaning": "Individual or team responsible for completing the task",
+          "tags": ["responsibility", "person", "assignment"]
+        },
+        "Data.priority": {
+          "name": "Data.priority",
+          "type": "keyword",
+          "description": "Priority level of the task",
+          "aliases": ["priority", "importance", "urgency"],
+          "examples": ["High", "Medium", "Low"],
+          "isSearchable": true,
+          "isFilterable": true,
+          "isAggregatable": true,
+          "businessMeaning": "Business priority assigned to the task for resource allocation",
+          "tags": ["priority", "categorical", "planning"],
+          "validValues": ["High", "Medium", "Low", "Critical"]
+        },
+        "Data.startDate": {
+          "name": "Data.startDate",
+          "type": "date",
+          "description": "Planned or actual start date of the task",
+          "aliases": ["start date", "begin date", "commencement date"],
+          "examples": ["2024-01-15", "2024-02-01"],
+          "isSearchable": false,
+          "isFilterable": true,
+          "isAggregatable": true,
+          "businessMeaning": "When the task is scheduled to begin or actually began",
+          "tags": ["date", "schedule", "timeline"],
+          "dateFormat": "yyyy-MM-dd"
+        },
+        "Data.dueDate": {
+          "name": "Data.dueDate",
+          "type": "date",
+          "description": "Expected completion date for the task",
+          "aliases": ["due date", "deadline", "completion date"],
+          "examples": ["2024-02-28", "2024-03-15"],
+          "isSearchable": false,
+          "isFilterable": true,
+          "isAggregatable": true,
+          "businessMeaning": "Target date for task completion",
+          "tags": ["date", "deadline", "timeline"],
+          "dateFormat": "yyyy-MM-dd"
+        }
+      }
+    }
+  }
+}

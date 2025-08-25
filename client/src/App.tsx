@@ -13,6 +13,7 @@ import ErrorBoundary from '@/components/common/ErrorBoundary';
 
 // Page components
 import DirectQueryPage from '@/pages/DirectQueryPage';
+import DirectQueryPage2 from '@/pages/DirectQueryPage2';
 import AutoQueryPage from '@/pages/AutoQueryPage';
 import QueryBuilderPage from '@/pages/QueryBuilderPage';
 import MultiIndexJoinPage from '@/pages/MultiIndexJoinPage';
@@ -96,6 +97,7 @@ const App: React.FC = () => {
             
             {/* Phase 1: Direct Elasticsearch Query */}
             <Route path="/direct-query" element={<DirectQueryPage />} />
+            <Route path="/direct-query-2" element={<DirectQueryPage2 />} />
             
             {/* Auto Query with URL Parameters */}
             <Route path="/auto-query" element={<AutoQueryPage />} />
