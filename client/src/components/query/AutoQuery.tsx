@@ -1,4 +1,4 @@
-import React, { useState, useEffect, useMemo, useCallback } from 'react';
+import React, { useCallback, useEffect, useMemo } from 'react';
 import { useSearchParams } from 'react-router-dom';
 import {
   Box,
@@ -8,79 +8,52 @@ import {
   Typography,
   Grid,
   Chip,
-  Alert,
   IconButton,
   Tooltip,
-  // Divider,
-  Paper,
-  List,
-  ListItem,
-  ListItemText,
+  Button,
+  Switch,
+  FormControlLabel,
 } from '@mui/material';
 import {
   Clear as ClearIcon,
   FilterList as FilterIcon,
-  ContentCopy as CopyIcon,
   Link as LinkIcon,
-  CheckCircle as SuccessIcon,
+  PlayArrow as ExecuteIcon,
 } from '@mui/icons-material';
 
 import {
-  QueryExecutionCard,
   QueryResultsSection,
   ExportActions,
+  ColumnFilter,
+  IndexSelector,
+  LoadingSpinner,
+  ErrorDisplay,
 } from '@/components/common';
 
-import { useElasticsearchQuery } from '@/hooks/useElasticsearchQuery';
-import { useElasticsearchPagination } from '@/hooks/useElasticsearchPagination';
+import { useAutoQueryState, DefaultFilter } from '@/hooks/useAutoQueryState';
 import { useExcelExport } from '@/hooks/useExcelExport';
-
-interface DefaultFilter {
-  field: string;
-  operator: string;
-  value: string | number;
-  type: 'term' | 'range' | 'match' | 'wildcard' | 'exists';
-  label?: string;
-}
+import {
+  getSelectedColumnsForIndex,
+  saveColumnPreferences,
+  clearColumnPreferencesForIndex,
+} from '@/utils/excelExport';
 
 const AutoQuery: React.FC = () => {
   const [searchParams, setSearchParams] = useSearchParams();
   
-  // URL state
-  const [appliedFilters, setAppliedFilters] = useState<DefaultFilter[]>([]);
-  const [urlCopied, setUrlCopied] = useState(false);
-  const [autoExecuted, setAutoExecuted] = useState(false);
-
-  // Parse URL parameters for pagination
-  const urlFrom = useMemo(() => {
-    const from = searchParams.get('from');
-    return from ? parseInt(from) : 0;
-  }, [searchParams]);
-
-  const urlSize = useMemo(() => {
-    const size = searchParams.get('size');
-    return size ? parseInt(size) : 10;
-  }, [searchParams]);
-
-  // Use shared hooks
-  const query = useElasticsearchQuery({
-    onResult: () => {
-      pagination.resetPagination();
-    },
-  });
-
-  const pagination = useElasticsearchPagination(10);
+  // Use centralized state management
+  const autoQueryState = useAutoQueryState();
   
   // Excel export functionality
   const excelExport = useExcelExport({
-    selectedIndex: query.selectedIndex,
+    selectedIndex: autoQueryState.config.selectedIndex,
+    selectedColumns: autoQueryState.config.selectedColumns,
   });
 
   // Parse default filters from URL query parameters
   const defaultFilters = useMemo(() => {
     const filters: DefaultFilter[] = [];
     
-    // Parse various filter formats from query parameters
     searchParams.forEach((value, key) => {
       // Skip special control parameters
       if (key === 'index' || key === 'from' || key === 'size' || key === 'autoExecute' || key === 'query') {
@@ -143,7 +116,7 @@ const AutoQuery: React.FC = () => {
           case 'date_from':
             if (searchParams.get('date_to')) {
               filters.push({
-                field: 'created_at',
+                field: '@timestamp',
                 operator: 'range',
                 value: `${value} TO ${searchParams.get('date_to')}`,
                 type: 'range',
@@ -151,46 +124,15 @@ const AutoQuery: React.FC = () => {
               });
             }
             break;
-          case 'project':
-            filters.push({
-              field: 'project.keyword',
-              operator: 'term',
-              value: value,
-              type: 'term',
-              label: `Project: ${value}`,
-            });
-            break;
-          case 'user_id':
-            filters.push({
-              field: 'user_id',
-              operator: 'term',
-              value: parseInt(value),
-              type: 'term',
-              label: `User ID: ${value}`,
-            });
-            break;
-          case 'search':
-            filters.push({
-              field: '_all',
-              operator: 'match',
-              value: value,
-              type: 'match',
-              label: `Search: ${value}`,
-            });
-            break;
           default:
-            // For any other parameter, treat as a field filter
-            const needsKeyword = typeof value === 'string' && 
-                                !key.includes('_id') && 
-                                !key.includes('count');
+            // Generic filter
             filters.push({
-              field: needsKeyword ? `${key}.keyword` : key,
+              field: key,
               operator: 'term',
               value: value,
               type: 'term',
               label: `${key}: ${value}`,
             });
-            break;
         }
       }
     });
@@ -198,307 +140,320 @@ const AutoQuery: React.FC = () => {
     return filters;
   }, [searchParams]);
 
-  // Generate Elasticsearch query with filters
-  const generateFilteredQuery = useCallback((filters: DefaultFilter[]) => {
-    // Check if there's a full query in the URL
-    const urlQuery = searchParams.get('query');
-    if (urlQuery) {
-      try {
-        const parsedQuery = JSON.parse(urlQuery);
-        return JSON.stringify(parsedQuery, null, 2);
-      } catch (e) {
-        console.error('Failed to parse query from URL:', e);
-      }
+  // Initialize from URL parameters
+  useEffect(() => {
+    const indexFromUrl = searchParams.get('index');
+    const autoExecute = searchParams.get('autoExecute') === 'true';
+
+    if (indexFromUrl && indexFromUrl !== autoQueryState.config.selectedIndex) {
+      autoQueryState.setSelectedIndex(indexFromUrl);
     }
-    
-    const mustClauses: any[] = [];
-    
-    filters.forEach(filter => {
-      switch (filter.type) {
-        case 'term':
-          mustClauses.push({
-            term: {
-              [filter.field]: filter.value
-            }
-          });
-          break;
-        case 'range':
-          if (typeof filter.value === 'string' && filter.value.includes(' TO ')) {
-            const [fromVal, toVal] = filter.value.split(' TO ');
-            mustClauses.push({
-              range: {
-                [filter.field]: {
-                  gte: fromVal.trim(),
-                  lte: toVal.trim()
-                }
-              }
-            });
-          }
-          break;
-        case 'match':
-          mustClauses.push({
-            match: {
-              [filter.field]: filter.value
-            }
-          });
-          break;
-        case 'wildcard':
-          mustClauses.push({
-            wildcard: {
-              [filter.field]: filter.value
-            }
-          });
-          break;
-        case 'exists':
-          mustClauses.push({
-            exists: {
-              field: filter.field
-            }
-          });
-          break;
-      }
-    });
 
-    const queryObj = {
-      query: {
-        bool: {
-          must: mustClauses.length > 0 ? mustClauses : [{ match_all: {} }]
-        }
-      },
-      size: urlSize,
-      from: urlFrom,
-      sort: [
-        { _score: { order: 'desc' } }
-      ]
-    };
-
-    return JSON.stringify(queryObj, null, 2);
-  }, [searchParams, urlSize, urlFrom]);
-
-  // Set index from URL
-  useEffect(() => {
-    const urlIndex = searchParams.get('index');
-    if (urlIndex && query.availableIndexes.includes(urlIndex)) {
-      query.setSelectedIndex(urlIndex);
-    }
-  }, [searchParams, query.availableIndexes]);
-
-  // Apply filters and generate query when URL changes
-  useEffect(() => {
-    setAppliedFilters(defaultFilters);
-    const generatedQuery = generateFilteredQuery(defaultFilters);
-    query.setQueryText(generatedQuery);
-  }, [defaultFilters, generateFilteredQuery, query]);
-
-  // Auto-execute query if requested via URL or if there are filters applied
-  useEffect(() => {
-    const shouldAutoExecute = 
-      (searchParams.get('autoExecute') === 'true') || 
-      (appliedFilters.length > 0) ||
-      (searchParams.get('query')); // Execute if there's a direct query parameter
+    if (defaultFilters.length > 0) {
+      autoQueryState.setAppliedFilters(defaultFilters);
       
-    if (
-      shouldAutoExecute && 
-      query.selectedIndex && 
-      query.queryText && 
-      !query.loading &&
-      !query.indexesLoading &&
-      !autoExecuted
-    ) {
-      setAutoExecuted(true);
-      // Execute after a small delay to ensure everything is set up
-      const timer = setTimeout(() => {
-        handleExecute();
-      }, 500);
-      return () => clearTimeout(timer);
-    }
-  }, [query.selectedIndex, query.queryText, appliedFilters, searchParams, query.indexesLoading, query.loading, autoExecuted]);
-
-  // Enhanced execute function
-  const handleExecute = useCallback(async () => {
-    await query.executeQuery(urlFrom, urlSize);
-  }, [query, urlFrom, urlSize]);
-
-  // Handle query text change
-  const handleQueryChange = useCallback((event: React.ChangeEvent<HTMLTextAreaElement>) => {
-    query.setQueryText(event.target.value);
-  }, [query]);
-
-  // Remove a filter
-  const removeFilter = (indexToRemove: number) => {
-    // const updatedFilters = appliedFilters.filter((_, index) => index !== indexToRemove);
-    const newParams = new URLSearchParams(searchParams);
-    
-    // Remove the filter from URL
-    const filterToRemove = appliedFilters[indexToRemove];
-    searchParams.forEach((value, key) => {
-      if (key !== 'index' && key !== 'from' && key !== 'size' && key !== 'autoExecute') {
-        const filterLabel = `${key}: ${value}`;
-        if (filterToRemove.label === filterLabel || key === filterToRemove.field.replace('.keyword', '')) {
-          newParams.delete(key);
-        }
+      // Auto-execute if requested and not already executed
+      if (autoExecute && indexFromUrl && !autoQueryState.result) {
+        autoQueryState.executeQuery();
       }
+    }
+  }, [searchParams, defaultFilters, autoQueryState]);
+
+  // Handle index change
+  const handleIndexChange = useCallback((index: string) => {
+    autoQueryState.setSelectedIndex(index);
+    
+    // Load saved column preferences for this index
+    const savedColumns = getSelectedColumnsForIndex(index);
+    if (savedColumns && savedColumns.length > 0) {
+      autoQueryState.setSelectedColumns(savedColumns);
+    }
+    
+    // Update URL
+    const newSearchParams = new URLSearchParams(searchParams);
+    if (index) {
+      newSearchParams.set('index', index);
+    } else {
+      newSearchParams.delete('index');
+    }
+    setSearchParams(newSearchParams);
+  }, [autoQueryState, searchParams, setSearchParams]);
+
+  // Handle filter removal
+  const handleFilterRemove = useCallback((filterIndex: number) => {
+    autoQueryState.removeFilter(filterIndex);
+  }, [autoQueryState]);
+
+  // Handle clear all filters
+  const handleClearAllFilters = useCallback(() => {
+    autoQueryState.clearFilters();
+  }, [autoQueryState]);
+
+  // Handle execute query
+  const handleExecuteQuery = useCallback(async () => {
+    await autoQueryState.executeQuery();
+  }, [autoQueryState]);
+
+  // Handle Excel export
+  const handleExcelExport = useCallback(() => {
+    if (autoQueryState.result) {
+      excelExport.exportToExcel(autoQueryState.result, 'auto_query_results');
+    }
+  }, [autoQueryState.result, excelExport]);
+
+  // Handle column selection change with persistence
+  const handleColumnToggle = useCallback((column: string) => {
+    autoQueryState.handleColumnToggle(column);
+    
+    // Save preferences to session storage
+    if (autoQueryState.config.selectedIndex) {
+      const newSelection = autoQueryState.config.selectedColumns.includes(column)
+        ? autoQueryState.config.selectedColumns.filter(col => col !== column)
+        : [...autoQueryState.config.selectedColumns, column];
+      saveColumnPreferences(autoQueryState.config.selectedIndex, newSelection);
+    }
+  }, [autoQueryState]);
+
+  // Handle select all/none for columns with persistence
+  const handleSelectAllColumns = useCallback(() => {
+    autoQueryState.handleSelectAllColumns();
+    if (autoQueryState.config.selectedIndex) {
+      const columnsToSelect = autoQueryState.schemaColumns.length > 0 
+        ? autoQueryState.schemaColumns 
+        : autoQueryState.config.availableColumns;
+      saveColumnPreferences(autoQueryState.config.selectedIndex, columnsToSelect);
+    }
+  }, [autoQueryState]);
+
+  const handleSelectNoColumns = useCallback(() => {
+    autoQueryState.handleSelectNoColumns();
+    if (autoQueryState.config.selectedIndex) {
+      saveColumnPreferences(autoQueryState.config.selectedIndex, ['_id']);
+    }
+  }, [autoQueryState]);
+
+  // Column filter popover handlers
+  const handleColumnFilterClick = useCallback((event: React.MouseEvent<HTMLButtonElement>) => {
+    autoQueryState.setColumnAnchorEl(event.currentTarget);
+    autoQueryState.setColumnFilterOpen(true);
+  }, [autoQueryState]);
+
+  const handleColumnFilterClose = useCallback(() => {
+    autoQueryState.setColumnFilterOpen(false);
+    autoQueryState.setColumnAnchorEl(null);
+  }, [autoQueryState]);
+
+  // Generate shareable URL
+  const generateShareableUrl = useCallback(() => {
+    const url = new URL(window.location.href);
+    url.searchParams.set('index', autoQueryState.config.selectedIndex);
+    url.searchParams.set('autoExecute', 'true');
+    
+    // Add filters to URL
+    autoQueryState.config.appliedFilters.forEach((filter, index) => {
+      url.searchParams.set(`filter_${index}`, JSON.stringify({
+        field: filter.field,
+        operator: filter.operator,
+        value: filter.value,
+        type: filter.type,
+        label: filter.label,
+      }));
     });
     
-    setSearchParams(newParams);
-  };
+    return url.toString();
+  }, [autoQueryState.config.selectedIndex, autoQueryState.config.appliedFilters]);
 
-  // Clear all filters
-  const clearAllFilters = () => {
-    const newParams = new URLSearchParams();
-    // Keep only control parameters
-    if (searchParams.get('index')) newParams.set('index', searchParams.get('index')!);
-    if (searchParams.get('from')) newParams.set('from', searchParams.get('from')!);
-    if (searchParams.get('size')) newParams.set('size', searchParams.get('size')!);
-    setSearchParams(newParams);
-  };
+  // Copy URL to clipboard
+  const handleCopyUrl = useCallback(async () => {
+    try {
+      await navigator.clipboard.writeText(generateShareableUrl());
+      // You might want to add a toast notification here
+    } catch (error) {
+      console.error('Failed to copy URL:', error);
+    }
+  }, [generateShareableUrl]);
 
-  // Copy current URL to clipboard
-  const copyUrlToClipboard = () => {
-    const url = window.location.href;
-    navigator.clipboard.writeText(url);
-    setUrlCopied(true);
-    setTimeout(() => setUrlCopied(false), 2000);
-  };
-
-  // Clear results
-  const handleClear = () => {
-    query.clearResults();
-    setAutoExecuted(false);
-    pagination.resetPagination();
-  };
-
-  const { columns, rows } = query.result ? query.formatResultsForTable(pagination.getPaginatedHits(query.result)) : { columns: [], rows: [] };
-  const totalHits = typeof query.result?.hits?.total === 'number' 
-    ? query.result.hits.total 
-    : query.result?.hits?.total?.value || 0;
+  // Get formatted results for table display
+  const { columns, rows } = autoQueryState.getFormattedResults();
+  const totalHits = typeof autoQueryState.result?.hits?.total === 'number' 
+    ? autoQueryState.result.hits.total 
+    : autoQueryState.result?.hits?.total?.value || 0;
 
   return (
-    <Box>
-      {/* URL Info Section */}
-      <Card sx={{ mb: 3 }} elevation={2}>
-        <CardHeader 
-          title="Current URL Configuration"
-          avatar={<LinkIcon color="primary" />}
-          action={
-            <Tooltip title={urlCopied ? "Copied!" : "Copy URL"}>
-              <IconButton onClick={copyUrlToClipboard} color={urlCopied ? "success" : "default"}>
-                {urlCopied ? <SuccessIcon /> : <CopyIcon />}
-              </IconButton>
-            </Tooltip>
-          }
-        />
-        <CardContent>
-          <Paper variant="outlined" sx={{ p: 2, bgcolor: 'grey.50', mb: 2 }}>
-            <Typography variant="body2" sx={{ wordBreak: 'break-all', fontFamily: 'monospace' }}>
-              {window.location.href}
-            </Typography>
-          </Paper>
-          
-          {searchParams.toString() && (
-            <Box>
-              <Typography variant="subtitle2" gutterBottom>Active Parameters:</Typography>
-              <List dense>
-                {Array.from(searchParams.entries()).map(([key, value]) => (
-                  <ListItem key={key}>
-                    <ListItemText 
-                      primary={`${key}: ${value}`}
-                      primaryTypographyProps={{ variant: 'body2', fontFamily: 'monospace' }}
-                    />
-                  </ListItem>
-                ))}
-              </List>
-            </Box>
-          )}
-        </CardContent>
-      </Card>
-
-      {/* Applied Filters Display */}
-      {appliedFilters.length > 0 && (
-        <Card sx={{ mb: 3 }} elevation={2}>
-          <CardContent>
-            <Box sx={{ display: 'flex', alignItems: 'center', mb: 2 }}>
-              <FilterIcon sx={{ mr: 1, color: 'primary.main' }} />
-              <Typography variant="h6">Applied Filters</Typography>
-              <Box sx={{ ml: 'auto' }}>
-                <Tooltip title="Clear all filters">
-                  <IconButton onClick={clearAllFilters} size="small">
-                    <ClearIcon />
-                  </IconButton>
-                </Tooltip>
-              </Box>
-            </Box>
-            
-            <Box sx={{ display: 'flex', flexWrap: 'wrap', gap: 1, mb: 2 }}>
-              {appliedFilters.map((filter, index) => (
-                <Chip
-                  key={index}
-                  label={filter.label || `${filter.field}: ${filter.value}`}
-                  variant="filled"
-                  color="primary"
-                  onDelete={() => removeFilter(index)}
-                  deleteIcon={<ClearIcon />}
-                  size="small"
-                />
-              ))}
-            </Box>
-            
-            <Alert severity="info">
-              {appliedFilters.length} filter{appliedFilters.length !== 1 ? 's' : ''} applied from URL parameters. 
-              {searchParams.get('autoExecute') === 'true' ? ' Query will auto-execute.' : ' Click Execute to run the query.'}
-            </Alert>
-          </CardContent>
-        </Card>
-      )}
-
+    <Box sx={{ p: 2 }}>
+      <Typography variant="h4" gutterBottom sx={{ display: 'flex', alignItems: 'center', gap: 1 }}>
+        <FilterIcon />
+        Auto Query
+      </Typography>
+      
       <Grid container spacing={3}>
-        {/* Query Configuration */}
+        {/* Configuration Section */}
         <Grid item xs={12}>
-          <QueryExecutionCard
-            selectedIndex={query.selectedIndex}
-            availableIndexes={query.availableIndexes}
-            onIndexChange={query.setSelectedIndex}
-            indexesLoading={query.indexesLoading}
-            queryText={query.queryText}
-            onQueryChange={handleQueryChange}
-            onExecute={handleExecute}
-            onClear={handleClear}
-            loading={query.loading}
-            showFromSize={false}
-            title="Generated Query Configuration"
-            showQueryGuidelines={false}
-          >
-            {query.result && (
-              <ExportActions
-                onExcelExport={() => excelExport.exportToExcel(query.result!, 'auto_query_results')}
-                onColumnFilterClick={() => {}}
-                selectedColumnsCount={0}
-                totalColumnsCount={0}
-                disabled={excelExport.isExportDisabled(query.result)}
-                showExcelExport={true}
-                showColumnFilter={false}
-                excelLabel="Export Results"
-              />
-            )}
-          </QueryExecutionCard>
+          <Card elevation={2}>
+            <CardHeader
+              title="Query Configuration"
+              action={
+                <Box sx={{ display: 'flex', gap: 1 }}>
+                  <Tooltip title="Copy shareable URL">
+                    <IconButton onClick={handleCopyUrl} disabled={!autoQueryState.config.selectedIndex}>
+                      <LinkIcon />
+                    </IconButton>
+                  </Tooltip>
+                </Box>
+              }
+            />
+            <CardContent>
+              <Grid container spacing={3}>
+                {/* Index Selection */}
+                <Grid item xs={12} md={6}>
+                  <IndexSelector
+                    selectedIndex={autoQueryState.config.selectedIndex}
+                    availableIndexes={autoQueryState.availableIndexes}
+                    onIndexChange={handleIndexChange}
+                    loading={autoQueryState.indexesLoading}
+                  />
+                </Grid>
+
+                {/* Show All Data Toggle */}
+                <Grid item xs={12} md={6}>
+                  <FormControlLabel
+                    control={
+                      <Switch
+                        checked={autoQueryState.config.showAllData}
+                        onChange={(e) => autoQueryState.setShowAllData(e.target.checked)}
+                      />
+                    }
+                    label="Show All Data (no filters required)"
+                  />
+                </Grid>
+
+                {/* Action Buttons */}
+                <Grid item xs={12}>
+                  <Box sx={{ display: 'flex', gap: 2, flexWrap: 'wrap' }}>
+                    <Button
+                      variant="contained"
+                      startIcon={autoQueryState.loading ? <LoadingSpinner size={16} /> : <ExecuteIcon />}
+                      onClick={handleExecuteQuery}
+                      disabled={autoQueryState.loading || !autoQueryState.config.selectedIndex}
+                      size="large"
+                    >
+                      {autoQueryState.loading ? 'Executing...' : 'Execute Query'}
+                    </Button>
+
+                    <Button
+                      variant="outlined"
+                      startIcon={<ClearIcon />}
+                      onClick={autoQueryState.clearResults}
+                      disabled={autoQueryState.loading}
+                    >
+                      Clear Results
+                    </Button>
+
+                    {autoQueryState.result && rows.length > 0 && (
+                      <ExportActions
+                        onExcelExport={handleExcelExport}
+                        onColumnFilterClick={handleColumnFilterClick}
+                        selectedColumnsCount={autoQueryState.config.selectedColumns.length}
+                        totalColumnsCount={autoQueryState.schemaColumns.length > 0 ? autoQueryState.schemaColumns.length : autoQueryState.config.availableColumns.length}
+                        disabled={autoQueryState.loading}
+                      />
+                    )}
+                  </Box>
+                </Grid>
+              </Grid>
+            </CardContent>
+          </Card>
         </Grid>
 
+        {/* Applied Filters Section */}
+        {autoQueryState.config.appliedFilters.length > 0 && (
+          <Grid item xs={12}>
+            <Card elevation={1}>
+              <CardHeader
+                title={`Applied Filters (${autoQueryState.config.appliedFilters.length})`}
+                action={
+                  <Button
+                    size="small"
+                    startIcon={<ClearIcon />}
+                    onClick={handleClearAllFilters}
+                  >
+                    Clear All
+                  </Button>
+                }
+              />
+              <CardContent>
+                <Box sx={{ display: 'flex', flexWrap: 'wrap', gap: 1 }}>
+                  {autoQueryState.config.appliedFilters.map((filter, index) => (
+                    <Chip
+                      key={`${filter.field}-${filter.value}-${index}`}
+                      label={filter.label || `${filter.field}: ${filter.value}`}
+                      onDelete={() => handleFilterRemove(index)}
+                      color="primary"
+                      variant="outlined"
+                    />
+                  ))}
+                </Box>
+              </CardContent>
+            </Card>
+          </Grid>
+        )}
+
+        {/* Loading State */}
+        {autoQueryState.loading && (
+          <Grid item xs={12}>
+            <LoadingSpinner message="Executing auto query..." />
+          </Grid>
+        )}
+
+        {/* Error Display */}
+        {autoQueryState.error && !autoQueryState.loading && (
+          <Grid item xs={12}>
+            <ErrorDisplay
+              error={autoQueryState.error}
+              onRetry={handleExecuteQuery}
+              context="Auto Query Execution"
+            />
+          </Grid>
+        )}
+
         {/* Results Section */}
-        <QueryResultsSection
-          result={query.result}
-          error={query.error}
-          loading={query.loading}
-          columns={columns}
-          rows={rows}
-          page={pagination.page}
-          rowsPerPage={pagination.rowsPerPage}
-          totalHits={totalHits}
-          onPageChange={pagination.handleChangePage}
-          onRowsPerPageChange={pagination.handleChangeRowsPerPage}
-          onRetryError={handleExecute}
-          selectedIndex={query.selectedIndex}
-          emptyMessage="No results found"
-        />
+        {autoQueryState.result && !autoQueryState.loading && !autoQueryState.error && (
+          <QueryResultsSection
+            result={autoQueryState.result}
+            error={autoQueryState.error}
+            loading={autoQueryState.loading}
+            columns={columns}
+            rows={rows}
+            page={autoQueryState.config.page}
+            rowsPerPage={autoQueryState.config.rowsPerPage}
+            totalHits={totalHits}
+            onPageChange={autoQueryState.handlePageChange}
+            onRowsPerPageChange={autoQueryState.handleRowsPerPageChange}
+            onRetryError={handleExecuteQuery}
+            selectedIndex={autoQueryState.config.selectedIndex}
+            emptyMessage="No results found"
+          >
+            {/* Column Filter Popover */}
+            <ColumnFilter
+              open={autoQueryState.columnFilterOpen}
+              anchorEl={autoQueryState.columnAnchorEl}
+              onClose={handleColumnFilterClose}
+              availableColumns={autoQueryState.schemaColumns.length > 0 ? autoQueryState.schemaColumns : autoQueryState.config.availableColumns}
+              selectedColumns={autoQueryState.config.selectedColumns}
+              onColumnToggle={handleColumnToggle}
+              onSelectAll={handleSelectAllColumns}
+              onSelectNone={handleSelectNoColumns}
+              onReset={() => {
+                if (autoQueryState.config.selectedIndex) {
+                  clearColumnPreferencesForIndex(autoQueryState.config.selectedIndex);
+                  const columnsToReset = autoQueryState.schemaColumns.length > 0 ? autoQueryState.schemaColumns : autoQueryState.config.availableColumns;
+                  autoQueryState.setSelectedColumns(columnsToReset);
+                }
+              }}
+              footerMessage="Selected columns will be saved for this index"
+            />
+          </QueryResultsSection>
+        )}
       </Grid>
     </Box>
   );
