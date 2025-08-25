@@ -7,7 +7,7 @@ class DirectQueryController {
     async executeDirectQuery(req, res) {
         const operationStartTime = Date.now();
         const operationId = Math.random().toString(36).substr(2, 9);
-        const { index, query, from = 0, size = 10, _source } = req.body;
+        const { index, query, from = 0, size = 10, _source, enableFielddata = false } = req.body;
         logger_1.logger.info(`[DIRECT-QUERY-${operationId}] Received direct query request`, {
             operationId,
             index,
@@ -15,6 +15,7 @@ class DirectQueryController {
             size,
             _source: _source ? (_source === true ? 'all' : _source.length) : 'all',
             queryType: query?.query ? Object.keys(query.query)[0] : 'unknown',
+            enableFielddata,
         });
         if (!index) {
             res.status(400).json({
@@ -85,6 +86,7 @@ class DirectQueryController {
             from: fromNum,
             size: sizeNum,
             _source: _source,
+            enableFielddata: enableFielddata,
         });
         const searchTime = Date.now() - searchStartTime;
         const totalTime = Date.now() - operationStartTime;

@@ -8,7 +8,7 @@ export class DirectQueryController {
     const operationStartTime = Date.now();
     const operationId = Math.random().toString(36).substr(2, 9);
 
-    const { index, query, from = 0, size = 10, _source } = req.body;
+    const { index, query, from = 0, size = 10, _source, enableFielddata = false } = req.body;
 
     logger.info(`[DIRECT-QUERY-${operationId}] Received direct query request`, {
       operationId,
@@ -17,6 +17,7 @@ export class DirectQueryController {
       size,
       _source: _source ? (_source === true ? 'all' : _source.length) : 'all',
       queryType: query?.query ? Object.keys(query.query)[0] : 'unknown',
+      enableFielddata,
     });
 
     // Validate required fields
@@ -96,6 +97,7 @@ export class DirectQueryController {
       from: fromNum,
       size: sizeNum,
       _source: _source,
+      enableFielddata: enableFielddata,
     });
 
     const searchTime = Date.now() - searchStartTime;

@@ -23,6 +23,7 @@ declare class ElasticsearchService {
         from?: number;
         size?: number;
         _source?: string[] | boolean;
+        enableFielddata?: boolean;
     }): Promise<ElasticsearchResponse>;
     ping(): Promise<boolean>;
 }

@@ -35,9 +35,9 @@ describe('ElasticsearchService', () => {
 
     // Reset environment variables
     delete process.env.SKIP_ELASTICSEARCH_HEALTH_CHECK;
-    process.env.ELASTICSEARCH_HOST = 'http://localhost:9200';
+    process.env.ELASTICSEARCH_HOST = 'https://localhost:9200';
     process.env.ELASTICSEARCH_USERNAME = 'elastic';
-    process.env.ELASTICSEARCH_PASSWORD = 'password';
+    process.env.ELASTICSEARCH_PASSWORD = 'ZDRlODI0MTA3MWZiMTFlZmFk';
     process.env.ALLOWED_HEALTH_INDEXES = 'index1,index2,index3';
   });
 

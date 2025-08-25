@@ -51,6 +51,11 @@ class ElasticsearchService {
           ca: fs.readFileSync(this.config.caCert),
           rejectUnauthorized: true,
         };
+      } else if (this.config.host.startsWith('https://localhost')) {
+        // For localhost HTTPS connections, disable SSL verification (development only)
+        clientConfig.tls = {
+          rejectUnauthorized: false,
+        };
       }
 
       logger.info('Elasticsearch client config:', JSON.stringify(clientConfig, null, 2));
@@ -318,6 +323,7 @@ class ElasticsearchService {
     from?: number;
     size?: number;
     _source?: string[] | boolean;
+    enableFielddata?: boolean;
   }): Promise<ElasticsearchResponse> {
     const operationStartTime = Date.now();
     const operationId = Math.random().toString(36).substr(2, 9);
@@ -328,6 +334,7 @@ class ElasticsearchService {
       from: params.from || 0,
       size: params.size || 10,
       _source: params._source ? (params._source === true ? 'all' : params._source.length) : 'all',
+      enableFielddata: params.enableFielddata || false,
     });
 
     if (!this.client) {
@@ -339,6 +346,50 @@ class ElasticsearchService {
     this.validateIndexAccess([params.index]);
 
     try {
+      // Handle fielddata enabling if requested
+      if (params.enableFielddata) {
+        logger.warn(`[ES-DIRECT-${operationId}] Fielddata enabled - this may use significant memory`, {
+          operationId,
+          index: params.index,
+        });
+        
+        try {
+          // Update index mapping to enable fielddata on text fields
+          await this.client.indices.putMapping({
+            index: params.index,
+            body: {
+              properties: {
+                "Data": {
+                  properties: {
+                    "status": {
+                      type: "text",
+                      fielddata: true,
+                      fields: {
+                        keyword: {
+                          type: "keyword",
+                          ignore_above: 256
+                        }
+                      }
+                    }
+                  }
+                }
+              }
+            }
+          });
+          
+          logger.info(`[ES-DIRECT-${operationId}] Fielddata enabled for text fields`, {
+            operationId,
+            index: params.index,
+          });
+        } catch (mappingError) {
+          logger.warn(`[ES-DIRECT-${operationId}] Failed to update mapping for fielddata`, {
+            operationId,
+            error: mappingError instanceof Error ? mappingError.message : String(mappingError),
+          });
+          // Continue with query execution anyway
+        }
+      }
+
       const searchStartTime = Date.now();
       
       logger.info(`[ES-DIRECT-${operationId}] Executing direct query`, {
@@ -349,11 +400,12 @@ class ElasticsearchService {
         from: params.from || 0,
         size: params.size || 10,
         _source: params._source ? (params._source === true ? 'all' : params._source.length) : 'all',
+        enableFielddata: params.enableFielddata || false,
       });
       
       // Build search body with optional _source filtering
       const searchBody: any = {
-        ...params.query,
+        query: params.query,
         from: params.from || 0,
         size: params.size || 10,
       };
@@ -362,6 +414,11 @@ class ElasticsearchService {
       if (params._source !== undefined) {
         searchBody._source = params._source;
       }
+      
+      logger.debug(`[ES-DIRECT-${operationId}] Final search body`, {
+        operationId,
+        searchBody: JSON.stringify(searchBody),
+      });
       
       const response = await this.client.search({
         index: params.index,

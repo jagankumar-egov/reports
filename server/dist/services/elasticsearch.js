@@ -45,6 +45,11 @@ class ElasticsearchService {
                     rejectUnauthorized: true,
                 };
             }
+            else if (this.config.host.startsWith('https://localhost')) {
+                clientConfig.tls = {
+                    rejectUnauthorized: false,
+                };
+            }
             logger_1.logger.info('Elasticsearch client config:', JSON.stringify(clientConfig, null, 2));
             this.client = new elasticsearch_1.Client(clientConfig);
             if (process.env.SKIP_ELASTICSEARCH_HEALTH_CHECK === 'true') {
@@ -271,6 +276,7 @@ class ElasticsearchService {
             from: params.from || 0,
             size: params.size || 10,
             _source: params._source ? (params._source === true ? 'all' : params._source.length) : 'all',
+            enableFielddata: params.enableFielddata || false,
         });
         if (!this.client) {
             logger_1.logger.error(`[ES-DIRECT-${operationId}] Elasticsearch client not initialized`);
@@ -278,6 +284,45 @@ class ElasticsearchService {
         }
         this.validateIndexAccess([params.index]);
         try {
+            if (params.enableFielddata) {
+                logger_1.logger.warn(`[ES-DIRECT-${operationId}] Fielddata enabled - this may use significant memory`, {
+                    operationId,
+                    index: params.index,
+                });
+                try {
+                    await this.client.indices.putMapping({
+                        index: params.index,
+                        body: {
+                            properties: {
+                                "Data": {
+                                    properties: {
+                                        "status": {
+                                            type: "text",
+                                            fielddata: true,
+                                            fields: {
+                                                keyword: {
+                                                    type: "keyword",
+                                                    ignore_above: 256
+                                                }
+                                            }
+                                        }
+                                    }
+                                }
+                            }
+                        }
+                    });
+                    logger_1.logger.info(`[ES-DIRECT-${operationId}] Fielddata enabled for text fields`, {
+                        operationId,
+                        index: params.index,
+                    });
+                }
+                catch (mappingError) {
+                    logger_1.logger.warn(`[ES-DIRECT-${operationId}] Failed to update mapping for fielddata`, {
+                        operationId,
+                        error: mappingError instanceof Error ? mappingError.message : String(mappingError),
+                    });
+                }
+            }
             const searchStartTime = Date.now();
             logger_1.logger.info(`[ES-DIRECT-${operationId}] Executing direct query`, {
                 operationId,
@@ -287,15 +332,20 @@ class ElasticsearchService {
                 from: params.from || 0,
                 size: params.size || 10,
                 _source: params._source ? (params._source === true ? 'all' : params._source.length) : 'all',
+                enableFielddata: params.enableFielddata || false,
             });
             const searchBody = {
-                ...params.query,
+                query: params.query,
                 from: params.from || 0,
                 size: params.size || 10,
             };
             if (params._source !== undefined) {
                 searchBody._source = params._source;
             }
+            logger_1.logger.debug(`[ES-DIRECT-${operationId}] Final search body`, {
+                operationId,
+                searchBody: JSON.stringify(searchBody),
+            });
             const response = await this.client.search({
                 index: params.index,
                 body: searchBody,

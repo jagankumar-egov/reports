@@ -1,4 +1,4 @@
-import React, { useState, useCallback, useEffect } from 'react';
+import React, { useCallback } from 'react';
 import {
   Box,
   Typography,
@@ -20,276 +20,98 @@ import {
   SavedQueriesList,
 } from '@/components/common';
 
-import { useElasticsearchQuery } from '@/hooks/useElasticsearchQuery';
-import { useElasticsearchPagination } from '@/hooks/useElasticsearchPagination';
+import { useDirectQueryState } from '@/hooks/useDirectQueryState';
 import { useExcelExport } from '@/hooks/useExcelExport';
+import { useSavedQueries } from '@/hooks/useSavedQueries';
 
 import {
-  getSelectedColumnsForIndex,
   saveColumnPreferences,
   clearColumnPreferencesForIndex,
 } from '@/utils/excelExport';
 
 import { SavedQuery, CreateSavedQueryRequest } from '@/types';
-import { useSavedQueries } from '@/hooks/useSavedQueries';
 
 const DirectQuery: React.FC = () => {
-  // Use shared hooks
-  const query = useElasticsearchQuery({
-    onResult: (_result) => {
-      setLastQueryWasFiltered(queryUsesFiltering);
-      pagination.resetPagination();
-    },
-  });
-
-  const pagination = useElasticsearchPagination(10);
+  // Use centralized state management
+  const queryState = useDirectQueryState();
   
-  // DirectQuery-specific state for from/size parameters
-  const [from, setFrom] = useState<number>(0);
-  const [size, setSize] = useState<number>(10);
-  
-  // Column selection state (DirectQuery specific)
-  const [selectedColumns, setSelectedColumns] = useState<string[]>([]);
-  
-  // Excel export functionality (after selectedColumns is declared)
+  // Excel export functionality
   const excelExport = useExcelExport({
-    selectedIndex: query.selectedIndex,
-    selectedColumns: selectedColumns,
+    selectedIndex: queryState.config.selectedIndex,
+    selectedColumns: queryState.config.selectedColumns,
   });
-  const [availableColumns, setAvailableColumns] = useState<string[]>([]);
-  const [schemaColumns, setSchemaColumns] = useState<string[]>([]); // Full schema, not affected by filtering
-  const [lastQueryWasFiltered, setLastQueryWasFiltered] = useState<boolean>(false);
-  const [columnFilterOpen, setColumnFilterOpen] = useState(false);
-  const [columnAnchorEl, setColumnAnchorEl] = useState<HTMLButtonElement | null>(null);
-  const [queryUsesFiltering, setQueryUsesFiltering] = useState(false);
-  
-  // Saved queries state
-  const [saveQueryDialogOpen, setSaveQueryDialogOpen] = useState(false);
-  const [savedQueriesListOpen, setSavedQueriesListOpen] = useState(false);
   
   // Saved queries hook
   const savedQueries = useSavedQueries({
     queryType: 'direct',
-    targetIndex: query.selectedIndex,
+    targetIndex: queryState.config.selectedIndex,
     autoLoad: false,
   });
 
-  // Reset column selection when index changes
-  useEffect(() => {
-    if (query.selectedIndex) {
-      // Clear current selections to force refresh
-      setAvailableColumns([]);
-      setSelectedColumns([]);
-      setSchemaColumns([]);
-      setLastQueryWasFiltered(false);
-      // Clear any results from previous index
-      query.clearResults();
-    }
-  }, [query.selectedIndex]);
-
-  // Update schema columns when we get unfiltered results
-  useEffect(() => {
-    if (query.result?.hits?.hits && !lastQueryWasFiltered && schemaColumns.length === 0) {
-      // Extract all columns from the unfiltered result
-      const allKeys = new Set<string>();
-      query.result.hits.hits.forEach(hit => {
-        if (hit._source) {
-          const extractKeys = (obj: any, prefix = '') => {
-            Object.keys(obj).forEach(key => {
-              const fullKey = prefix ? `${prefix}.${key}` : key;
-              if (obj[key] && typeof obj[key] === 'object' && !Array.isArray(obj[key])) {
-                extractKeys(obj[key], fullKey);
-              } else {
-                allKeys.add(fullKey);
-              }
-            });
-          };
-          extractKeys(hit._source);
-        }
-      });
-
-      const allColumns = ['_id', '_score', ...Array.from(allKeys).sort()];
-      setSchemaColumns(allColumns);
-      setAvailableColumns(allColumns);
-      
-      // Load saved column preferences for this index
-      const savedColumns = getSelectedColumnsForIndex(query.selectedIndex);
-      if (savedColumns && savedColumns.length > 0) {
-        // Filter saved columns to only include ones that exist in the schema
-        const validSavedColumns = savedColumns.filter(col => allColumns.includes(col));
-        if (validSavedColumns.length > 0) {
-          setSelectedColumns(validSavedColumns);
-        } else {
-          // If no valid saved columns, default to all
-          setSelectedColumns(allColumns);
-        }
-      } else {
-        // No saved preferences: default to all columns
-        setSelectedColumns(allColumns);
-      }
-    }
-  }, [query.result, lastQueryWasFiltered, schemaColumns.length, query.selectedIndex]);
-
-  // Enhanced execute function with column filtering
-  const handleExecute = useCallback(async () => {
-    // Prepare _source filtering for optimization
-    // Only apply filtering if user has made explicit column selections
-    let sourceFilter: string[] | boolean = true; // Default: return all fields
-    
-    if (selectedColumns.length > 0) {
-      // User has selected columns - filter to only non-metadata fields
-      const sourceFields = selectedColumns.filter(col => !col.startsWith('_'));
-      if (sourceFields.length > 0) {
-        sourceFilter = sourceFields;
-        setQueryUsesFiltering(true);
-      }
-    } else {
-      // No columns selected yet - check if there are saved preferences
-      const savedColumns = getSelectedColumnsForIndex(query.selectedIndex);
-      if (savedColumns && savedColumns.length > 0) {
-        const sourceFields = savedColumns.filter(col => !col.startsWith('_'));
-        if (sourceFields.length > 0 && savedColumns.length < 10) { // Only filter if user has limited selection
-          sourceFilter = sourceFields;
-          setQueryUsesFiltering(true);
-        }
-      }
-    }
-    
-    // Track whether this query uses filtering
-    const queryUsesFilteringFlag = Array.isArray(sourceFilter);
-    setQueryUsesFiltering(queryUsesFilteringFlag);
-    
-    await query.executeQuery(from, size, sourceFilter);
-  }, [query, from, size, selectedColumns]);
-
   // Handle query text change
   const handleQueryChange = useCallback((event: React.ChangeEvent<HTMLTextAreaElement>) => {
-    query.setQueryText(event.target.value);
-  }, [query]);
+    queryState.setQueryText(event.target.value);
+  }, [queryState]);
 
-  // Format result data for table display
-  const getPaginatedHits = useCallback(() => {
-    if (!query.result?.hits?.hits) return [];
-    const start = pagination.page * pagination.rowsPerPage;
-    const end = start + pagination.rowsPerPage;
-    return query.result.hits.hits.slice(start, end);
-  }, [query.result, pagination.page, pagination.rowsPerPage]);
+  // Handle execute button click
+  const handleExecute = useCallback(async () => {
+    await queryState.executeQuery();
+  }, [queryState]);
 
-  const formatResultsForTable = useCallback((hits: any[]) => {
-    if (!hits || hits.length === 0) return { columns: [], rows: [] };
-
-    // Get all unique keys from all documents
-    const allKeys = new Set<string>();
-    hits.forEach(hit => {
-      if (hit._source) {
-        const extractKeys = (obj: any, prefix = '') => {
-          Object.keys(obj).forEach(key => {
-            const fullKey = prefix ? `${prefix}.${key}` : key;
-            if (obj[key] && typeof obj[key] === 'object' && !Array.isArray(obj[key])) {
-              extractKeys(obj[key], fullKey);
-            } else {
-              allKeys.add(fullKey);
-            }
-          });
-        };
-        extractKeys(hit._source);
-      }
-    });
-
-    // Create columns from current result
-    const resultColumns = ['_id', '_score', ...Array.from(allKeys).sort()];
-    
-    // Use selected columns for display, but only show columns that exist in the current result
-    const displayColumns = selectedColumns.length > 0 
-      ? selectedColumns.filter(col => resultColumns.includes(col))
-      : resultColumns;
-    
-    // Create rows
-    const rows = hits.map((hit, index) => {
-      const row: any = {
-        id: `${hit._id}-${index}`,
-        _id: hit._id,
-        _score: hit._score,
-      };
-
-      // Flatten the _source object
-      const flattenObject = (obj: any, prefix = '') => {
-        Object.keys(obj).forEach(key => {
-          const fullKey = prefix ? `${prefix}.${key}` : key;
-          if (obj[key] && typeof obj[key] === 'object' && !Array.isArray(obj[key])) {
-            flattenObject(obj[key], fullKey);
-          } else {
-            row[fullKey] = obj[key];
-          }
-        });
-      };
-
-      if (hit._source) {
-        flattenObject(hit._source);
-      }
-
-      return row;
-    });
-
-    return { columns: displayColumns, rows };
-  }, [selectedColumns]);
-
-  const { columns, rows } = query.result ? formatResultsForTable(getPaginatedHits()) : { columns: [], rows: [] };
-  const totalHits = typeof query.result?.hits?.total === 'number' 
-    ? query.result.hits.total 
-    : query.result?.hits?.total?.value || 0;
+  // Get formatted results for table display
+  const { columns, rows } = queryState.getFormattedResults();
+  const totalHits = typeof queryState.result?.hits?.total === 'number' 
+    ? queryState.result.hits.total 
+    : queryState.result?.hits?.total?.value || 0;
   
-  // Handle column selection change
+  // Handle column selection change with persistence
   const handleColumnToggle = useCallback((column: string) => {
-    setSelectedColumns(prev => {
-      const newSelection = prev.includes(column)
-        ? prev.filter(col => col !== column)
-        : [...prev, column];
-      
-      // Save preferences to session storage
-      if (query.selectedIndex) {
-        saveColumnPreferences(query.selectedIndex, newSelection);
-      }
-      
-      return newSelection;
-    });
-  }, [query.selectedIndex]);
-  
-  // Handle select all/none for columns
-  const handleSelectAllColumns = useCallback(() => {
-    const columnsToSelect = schemaColumns.length > 0 ? schemaColumns : availableColumns;
-    setSelectedColumns(columnsToSelect);
-    if (query.selectedIndex) {
-      saveColumnPreferences(query.selectedIndex, columnsToSelect);
+    queryState.handleColumnToggle(column);
+    
+    // Save preferences to session storage
+    if (queryState.config.selectedIndex) {
+      const newSelection = queryState.config.selectedColumns.includes(column)
+        ? queryState.config.selectedColumns.filter(col => col !== column)
+        : [...queryState.config.selectedColumns, column];
+      saveColumnPreferences(queryState.config.selectedIndex, newSelection);
     }
-  }, [schemaColumns, availableColumns, query.selectedIndex]);
+  }, [queryState]);
+  
+  // Handle select all/none for columns with persistence
+  const handleSelectAllColumns = useCallback(() => {
+    queryState.handleSelectAllColumns();
+    if (queryState.config.selectedIndex) {
+      const columnsToSelect = queryState.schemaColumns.length > 0 
+        ? queryState.schemaColumns 
+        : queryState.config.availableColumns;
+      saveColumnPreferences(queryState.config.selectedIndex, columnsToSelect);
+    }
+  }, [queryState]);
   
   const handleSelectNoColumns = useCallback(() => {
-    // Keep at least _id column for table structure
-    const minColumns = ['_id'];
-    setSelectedColumns(minColumns);
-    if (query.selectedIndex) {
-      saveColumnPreferences(query.selectedIndex, minColumns);
+    queryState.handleSelectNoColumns();
+    if (queryState.config.selectedIndex) {
+      saveColumnPreferences(queryState.config.selectedIndex, ['_id']);
     }
-  }, [query.selectedIndex]);
+  }, [queryState]);
   
   // Handle Excel export
   const handleExcelExport = useCallback(() => {
-    if (query.result) {
-      excelExport.exportToExcel(query.result, 'direct_query_results');
+    if (queryState.result) {
+      excelExport.exportToExcel(queryState.result, 'direct_query_results');
     }
-  }, [query.result, excelExport]);
+  }, [queryState.result, excelExport]);
   
   // Column filter popover handlers
   const handleColumnFilterClick = useCallback((event: React.MouseEvent<HTMLButtonElement>) => {
-    setColumnAnchorEl(event.currentTarget);
-    setColumnFilterOpen(true);
-  }, []);
+    queryState.setColumnAnchorEl(event.currentTarget);
+    queryState.setColumnFilterOpen(true);
+  }, [queryState]);
   
   const handleColumnFilterClose = useCallback(() => {
-    setColumnFilterOpen(false);
-    setColumnAnchorEl(null);
-  }, []);
+    queryState.setColumnFilterOpen(false);
+    queryState.setColumnAnchorEl(null);
+  }, [queryState]);
   
   // Saved queries handlers
   const handleSaveQuery = useCallback(async (request: CreateSavedQueryRequest) => {
@@ -306,43 +128,61 @@ const DirectQuery: React.FC = () => {
     if (savedQuery.queryData.rawQuery) {
       // Set the index
       if (savedQuery.targetIndex) {
-        query.setSelectedIndex(savedQuery.targetIndex);
+        queryState.setSelectedIndex(savedQuery.targetIndex);
       }
       
       // Set the query text
-      query.setQueryText(JSON.stringify(savedQuery.queryData.rawQuery, null, 2));
+      queryState.setQueryText(JSON.stringify(savedQuery.queryData.rawQuery, null, 2));
       
       // Set pagination parameters if available
-      if (savedQuery.queryData.from !== undefined) {
-        setFrom(savedQuery.queryData.from);
-      }
-      if (savedQuery.queryData.size !== undefined) {
-        setSize(savedQuery.queryData.size);
-      }
+      const from = savedQuery.queryData.from || 0;
+      const size = savedQuery.queryData.size || 10;
+      queryState.setPagination(from, size, 0, size);
     }
-  }, [query]);
+  }, [queryState]);
   
   const handleSaveCurrentQuery = useCallback(() => {
-    if (!query.selectedIndex || !query.queryText.trim()) {
+    if (!queryState.config.selectedIndex || !queryState.config.queryText.trim()) {
       return;
     }
-    setSaveQueryDialogOpen(true);
-  }, [query.selectedIndex, query.queryText]);
+    queryState.setSaveQueryDialogOpen(true);
+  }, [queryState]);
   
   const getCurrentQueryData = useCallback(() => {
-    if (!query.queryText.trim()) return null;
+    if (!queryState.config.queryText.trim()) return null;
     
     try {
       return {
-        rawQuery: JSON.parse(query.queryText),
-        from,
-        size,
-        _source: selectedColumns.length > 0 ? selectedColumns.filter(col => !col.startsWith('_')) : undefined,
+        rawQuery: JSON.parse(queryState.config.queryText),
+        from: queryState.config.from,
+        size: queryState.config.size,
+        _source: queryState.config.selectedColumns.length > 0 
+          ? queryState.config.selectedColumns.filter(col => !col.startsWith('_')) 
+          : undefined,
       };
     } catch {
       return null;
     }
-  }, [query.queryText, from, size, selectedColumns]);
+  }, [queryState.config]);
+
+  // Handle from/size changes
+  const handleFromChange = useCallback((from: number) => {
+    queryState.setPagination(
+      from, 
+      queryState.config.size, 
+      Math.floor(from / queryState.config.size), 
+      queryState.config.size
+    );
+  }, [queryState]);
+
+  const handleSizeChange = useCallback((size: number) => {
+    queryState.setPagination(
+      0, 
+      size, 
+      0, 
+      size
+    );
+  }, [queryState]);
 
   return (
     <Box sx={{ p: 2 }}>
@@ -355,27 +195,30 @@ const DirectQuery: React.FC = () => {
         {/* Query Configuration */}
         <Grid item xs={12}>
           <QueryExecutionCard
-            selectedIndex={query.selectedIndex}
-            availableIndexes={query.availableIndexes}
-            onIndexChange={query.setSelectedIndex}
-            indexesLoading={query.indexesLoading}
-            queryText={query.queryText}
+            selectedIndex={queryState.config.selectedIndex}
+            availableIndexes={queryState.availableIndexes}
+            onIndexChange={queryState.setSelectedIndex}
+            indexesLoading={queryState.indexesLoading}
+            queryText={queryState.config.queryText}
             onQueryChange={handleQueryChange}
             onExecute={handleExecute}
-            onClear={query.clearResults}
-            loading={query.loading}
+            onClear={queryState.clearResults}
+            loading={queryState.loading}
             showFromSize={true}
-            from={from}
-            size={size}
-            onFromChange={setFrom}
-            onSizeChange={setSize}
+            from={queryState.config.from}
+            size={queryState.config.size}
+            onFromChange={handleFromChange}
+            onSizeChange={handleSizeChange}
+            showFielddataOption={true}
+            enableFielddata={queryState.config.enableFielddata}
+            onEnableFielddataChange={queryState.setEnableFielddata}
           >
             {/* Saved Queries Buttons */}
             <Button
               variant="outlined"
               startIcon={<SaveIcon />}
               onClick={handleSaveCurrentQuery}
-              disabled={query.loading || !query.selectedIndex || !query.queryText.trim()}
+              disabled={queryState.loading || !queryState.config.selectedIndex || !queryState.config.queryText.trim()}
             >
               Save Query
             </Button>
@@ -383,18 +226,18 @@ const DirectQuery: React.FC = () => {
             <Button
               variant="outlined"
               startIcon={<LoadIcon />}
-              onClick={() => setSavedQueriesListOpen(true)}
-              disabled={query.loading}
+              onClick={() => queryState.setSavedQueriesListOpen(true)}
+              disabled={queryState.loading}
             >
               Load Query
             </Button>
-            {query.result && rows.length > 0 && (
+            {queryState.result && rows.length > 0 && (
               <ExportActions
                 onExcelExport={handleExcelExport}
                 onColumnFilterClick={handleColumnFilterClick}
-                selectedColumnsCount={selectedColumns.length}
-                totalColumnsCount={schemaColumns.length > 0 ? schemaColumns.length : availableColumns.length}
-                disabled={query.loading}
+                selectedColumnsCount={queryState.config.selectedColumns.length}
+                totalColumnsCount={queryState.schemaColumns.length > 0 ? queryState.schemaColumns.length : queryState.config.availableColumns.length}
+                disabled={queryState.loading}
               />
             )}
           </QueryExecutionCard>
@@ -402,35 +245,35 @@ const DirectQuery: React.FC = () => {
 
         {/* Results Section */}
         <QueryResultsSection
-          result={query.result}
-          error={query.error}
-          loading={query.loading}
+          result={queryState.result}
+          error={queryState.error}
+          loading={queryState.loading}
           columns={columns}
           rows={rows}
-          page={pagination.page}
-          rowsPerPage={pagination.rowsPerPage}
+          page={queryState.config.page}
+          rowsPerPage={queryState.config.rowsPerPage}
           totalHits={totalHits}
-          onPageChange={pagination.handleChangePage}
-          onRowsPerPageChange={pagination.handleChangeRowsPerPage}
+          onPageChange={queryState.handlePageChange}
+          onRowsPerPageChange={queryState.handleRowsPerPageChange}
           onRetryError={handleExecute}
-          selectedIndex={query.selectedIndex}
+          selectedIndex={queryState.config.selectedIndex}
           emptyMessage="No results found"
         >
           {/* Column Filter Popover */}
           <ColumnFilter
-            open={columnFilterOpen}
-            anchorEl={columnAnchorEl}
+            open={queryState.columnFilterOpen}
+            anchorEl={queryState.columnAnchorEl}
             onClose={handleColumnFilterClose}
-            availableColumns={schemaColumns.length > 0 ? schemaColumns : availableColumns}
-            selectedColumns={selectedColumns}
+            availableColumns={queryState.schemaColumns.length > 0 ? queryState.schemaColumns : queryState.config.availableColumns}
+            selectedColumns={queryState.config.selectedColumns}
             onColumnToggle={handleColumnToggle}
             onSelectAll={handleSelectAllColumns}
             onSelectNone={handleSelectNoColumns}
             onReset={() => {
-              if (query.selectedIndex) {
-                clearColumnPreferencesForIndex(query.selectedIndex);
-                const columnsToReset = schemaColumns.length > 0 ? schemaColumns : availableColumns;
-                setSelectedColumns(columnsToReset);
+              if (queryState.config.selectedIndex) {
+                clearColumnPreferencesForIndex(queryState.config.selectedIndex);
+                const columnsToReset = queryState.schemaColumns.length > 0 ? queryState.schemaColumns : queryState.config.availableColumns;
+                queryState.setSelectedColumns(columnsToReset);
               }
             }}
             footerMessage="Selected columns will be saved for this index"
@@ -440,11 +283,11 @@ const DirectQuery: React.FC = () => {
       
       {/* Saved Queries Dialogs */}
       <SaveQueryDialog
-        open={saveQueryDialogOpen}
-        onClose={() => setSaveQueryDialogOpen(false)}
+        open={queryState.saveQueryDialogOpen}
+        onClose={() => queryState.setSaveQueryDialogOpen(false)}
         onSave={handleSaveQuery}
         queryType="direct"
-        targetIndex={query.selectedIndex || ''}
+        targetIndex={queryState.config.selectedIndex || ''}
         queryData={getCurrentQueryData() || {}}
         defaultName=""
         defaultDescription=""
@@ -452,10 +295,10 @@ const DirectQuery: React.FC = () => {
       />
       
       <SavedQueriesList
-        open={savedQueriesListOpen}
-        onClose={() => setSavedQueriesListOpen(false)}
+        open={queryState.savedQueriesListOpen}
+        onClose={() => queryState.setSavedQueriesListOpen(false)}
         onQuerySelect={handleLoadSavedQuery}
-        targetIndex={query.selectedIndex}
+        targetIndex={queryState.config.selectedIndex}
         queryType="direct"
       />
     </Box>

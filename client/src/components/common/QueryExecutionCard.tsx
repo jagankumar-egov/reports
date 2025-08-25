@@ -6,10 +6,11 @@ import {
   CardHeader,
   TextField,
   Button,
-  // Typography,
-  // Divider,
   Grid,
   CircularProgress,
+  FormControlLabel,
+  Checkbox,
+  Tooltip,
 } from '@mui/material';
 import {
   PlayArrow as ExecuteIcon,
@@ -46,6 +47,11 @@ export interface QueryExecutionCardProps {
   size?: number;
   onFromChange?: (from: number) => void;
   onSizeChange?: (size: number) => void;
+  
+  // Advanced options
+  showFielddataOption?: boolean;
+  enableFielddata?: boolean;
+  onEnableFielddataChange?: (enabled: boolean) => void;
 
   // Additional customization
   title?: string;
@@ -69,6 +75,9 @@ const QueryExecutionCard: React.FC<QueryExecutionCardProps> = ({
   size = 10,
   onFromChange,
   onSizeChange,
+  showFielddataOption = false,
+  enableFielddata = false,
+  onEnableFielddataChange,
   title = "Query Configuration",
   showQueryGuidelines = true,
   showShareableLink = true,
@@ -117,6 +126,24 @@ const QueryExecutionCard: React.FC<QueryExecutionCardProps> = ({
                 onChange={(e) => onSizeChange(Math.max(1, Math.min(1000, parseInt(e.target.value) || 10)))}
                 inputProps={{ min: 1, max: 1000 }}
               />
+            </Grid>
+          )}
+
+          {/* Enable Fielddata Option - Only show for DirectQuery */}
+          {showFielddataOption && onEnableFielddataChange && (
+            <Grid item xs={12}>
+              <Tooltip title="Enable fielddata for text fields to allow aggregations and sorting. Warning: This may use significant memory!">
+                <FormControlLabel
+                  control={
+                    <Checkbox
+                      checked={enableFielddata}
+                      onChange={(e) => onEnableFielddataChange(e.target.checked)}
+                      color="warning"
+                    />
+                  }
+                  label="Enable Fielddata (for aggregations on text fields)"
+                />
+              </Tooltip>
             </Grid>
           )}
 
