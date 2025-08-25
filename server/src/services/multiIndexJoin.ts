@@ -4,7 +4,8 @@ import {
   MultiIndexJoinRequest, 
   MultiIndexJoinResponse, 
   JoinConfiguration,
-  JoinedRecord 
+  JoinedRecord,
+  JoinSource
 } from '../types';
 
 class MultiIndexJoinService {
@@ -70,51 +71,43 @@ class MultiIndexJoinService {
     operationId: string
   ): Promise<{ results: JoinedRecord[]; joinSummary: any; aggregations?: any }> {
     
+    // Support both old and new formats
+    const isNewFormat = config.leftSource && config.rightSource;
+    
+    const leftSource = isNewFormat ? config.leftSource : { type: 'index', id: config.leftIndex!, name: config.leftIndex! };
+    const rightSource = isNewFormat ? config.rightSource : { type: 'index', id: config.rightIndex!, name: config.rightIndex! };
+    const leftField = isNewFormat ? config.leftField! : config.joinField!.left;
+    const rightField = isNewFormat ? config.rightField! : config.joinField!.right;
+    
     logger.info(`[MULTI-INDEX-JOIN-${operationId}] Executing single join`, {
       operationId,
-      leftIndex: config.leftIndex,
-      rightIndex: config.rightIndex,
+      leftSource: leftSource.type === 'index' ? leftSource.id : `savedQuery:${leftSource.name}`,
+      rightSource: rightSource.type === 'index' ? rightSource.id : `savedQuery:${rightSource.name}`,
       joinType: config.joinType,
-      leftField: config.joinField.left,
-      rightField: config.joinField.right
+      leftField,
+      rightField
     });
 
-    // Step 1: Query left index
-    const leftQuery = config.leftQuery || { match_all: {} };
-    const leftSearchParams = {
-      index: config.leftIndex,
-      query: leftQuery,
-      size: config.limit || 1000,
-      _source: config.fieldsToReturn?.left || true
-    };
-
+    // Step 1: Get left data (from index or saved query)
     const leftStartTime = Date.now();
-    const leftResults = await elasticsearchService.search(leftSearchParams);
+    const leftResults = await this.getSourceData(leftSource, operationId, 'left', config.limit);
     const leftTime = Date.now() - leftStartTime;
 
-    logger.info(`[MULTI-INDEX-JOIN-${operationId}] Left index query completed`, {
+    logger.info(`[MULTI-INDEX-JOIN-${operationId}] Left source query completed`, {
       operationId,
-      leftIndex: config.leftIndex,
+      leftSource: leftSource.type === 'index' ? leftSource.id : `savedQuery:${leftSource.name}`,
       leftResults: leftResults.hits.hits.length,
       leftTime: `${leftTime}ms`
     });
 
-    // Step 2: Query right index
-    const rightQuery = config.rightQuery || { match_all: {} };
-    const rightSearchParams = {
-      index: config.rightIndex,
-      query: rightQuery,
-      size: config.limit || 1000,
-      _source: config.fieldsToReturn?.right || true
-    };
-
+    // Step 2: Get right data (from index or saved query)
     const rightStartTime = Date.now();
-    const rightResults = await elasticsearchService.search(rightSearchParams);
+    const rightResults = await this.getSourceData(rightSource, operationId, 'right', config.limit);
     const rightTime = Date.now() - rightStartTime;
 
-    logger.info(`[MULTI-INDEX-JOIN-${operationId}] Right index query completed`, {
+    logger.info(`[MULTI-INDEX-JOIN-${operationId}] Right source query completed`, {
       operationId,
-      rightIndex: config.rightIndex,
+      rightSource: rightSource.type === 'index' ? rightSource.id : `savedQuery:${rightSource.name}`,
       rightResults: rightResults.hits.hits.length,
       rightTime: `${rightTime}ms`
     });
@@ -124,7 +117,9 @@ class MultiIndexJoinService {
     const joinedRecords = this.performJoin(
       leftResults.hits.hits, 
       rightResults.hits.hits,
-      config,
+      leftField,
+      rightField,
+      config.joinType,
       operationId
     );
     const joinTime = Date.now() - joinStartTime;
@@ -157,12 +152,63 @@ class MultiIndexJoinService {
     };
   }
 
+  /**
+   * Get data from either an index or a saved query
+   */
+  private async getSourceData(
+    source: JoinSource, 
+    operationId: string, 
+    side: 'left' | 'right', 
+    limit?: number
+  ): Promise<any> {
+    if (source.type === 'index') {
+      // Query the index directly
+      const searchParams = {
+        index: source.id,
+        query: { match_all: {} }, // You could pass custom queries here
+        size: limit || 1000,
+        _source: true
+      };
+      return await elasticsearchService.search(searchParams);
+    } else if (source.type === 'savedQuery') {
+      // Execute the saved query
+      if (!source.query || !source.targetIndex) {
+        throw new Error(`Invalid saved query source: missing query or targetIndex for ${source.name}`);
+      }
+      
+      const searchParams = {
+        index: source.targetIndex,
+        query: source.query,
+        size: limit || 1000,
+        _source: true
+      };
+      
+      logger.info(`[MULTI-INDEX-JOIN-${operationId}] Executing saved query for ${side} source`, {
+        operationId,
+        savedQueryName: source.name,
+        targetIndex: source.targetIndex,
+        hasQuery: !!source.query
+      });
+      
+      return await elasticsearchService.search(searchParams);
+    } else {
+      throw new Error(`Unknown source type: ${source.type}`);
+    }
+  }
+
   private performJoin(
     leftHits: any[],
     rightHits: any[],
-    config: JoinConfiguration,
+    leftField: string,
+    rightField: string,
+    joinType: string,
     operationId: string
   ): JoinedRecord[] {
+    // Create a temporary config for createJoinedRecords compatibility
+    const tempConfig: JoinConfiguration = {
+      joinType: joinType as any,
+      joinField: { left: leftField, right: rightField }
+    };
     
     // Create lookup maps for efficient joining
     const leftLookup = new Map<string, any[]>();
@@ -170,7 +216,7 @@ class MultiIndexJoinService {
 
     // Build left lookup
     leftHits.forEach(hit => {
-      const joinValue = this.extractJoinValue(hit._source, config.joinField.left);
+      const joinValue = this.extractJoinValue(hit._source, leftField);
       if (joinValue !== null && joinValue !== undefined) {
         const key = String(joinValue);
         if (!leftLookup.has(key)) {
@@ -182,7 +228,7 @@ class MultiIndexJoinService {
 
     // Build right lookup
     rightHits.forEach(hit => {
-      const joinValue = this.extractJoinValue(hit._source, config.joinField.right);
+      const joinValue = this.extractJoinValue(hit._source, rightField);
       if (joinValue !== null && joinValue !== undefined) {
         const key = String(joinValue);
         if (!rightLookup.has(key)) {
@@ -196,13 +242,13 @@ class MultiIndexJoinService {
     const processedKeys = new Set<string>();
 
     // Perform the join based on join type
-    switch (config.joinType) {
+    switch (joinType) {
       case 'inner':
         // Only records with matches in both indices
         for (const [key, leftRecords] of leftLookup) {
           if (rightLookup.has(key)) {
             const rightRecords = rightLookup.get(key)!;
-            this.createJoinedRecords(key, leftRecords, rightRecords, config, results);
+            this.createJoinedRecords(key, leftRecords, rightRecords, tempConfig, results);
             processedKeys.add(key);
           }
         }
@@ -212,7 +258,7 @@ class MultiIndexJoinService {
         // All left records, with right matches where available
         for (const [key, leftRecords] of leftLookup) {
           const rightRecords = rightLookup.get(key) || [];
-          this.createJoinedRecords(key, leftRecords, rightRecords, config, results);
+          this.createJoinedRecords(key, leftRecords, rightRecords, tempConfig, results);
           processedKeys.add(key);
         }
         break;
@@ -221,7 +267,7 @@ class MultiIndexJoinService {
         // All right records, with left matches where available
         for (const [key, rightRecords] of rightLookup) {
           const leftRecords = leftLookup.get(key) || [];
-          this.createJoinedRecords(key, leftRecords, rightRecords, config, results);
+          this.createJoinedRecords(key, leftRecords, rightRecords, tempConfig, results);
           processedKeys.add(key);
         }
         break;
@@ -232,7 +278,7 @@ class MultiIndexJoinService {
         for (const key of allKeys) {
           const leftRecords = leftLookup.get(key) || [];
           const rightRecords = rightLookup.get(key) || [];
-          this.createJoinedRecords(key, leftRecords, rightRecords, config, results);
+          this.createJoinedRecords(key, leftRecords, rightRecords, tempConfig, results);
         }
         break;
     }

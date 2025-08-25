@@ -1,17 +1,27 @@
 import { useState, useCallback, useEffect } from 'react';
+import { SavedQuery } from '@/types';
+
+export interface JoinSource {
+  type: 'index' | 'savedQuery';
+  id: string; // index name or saved query id
+  name: string; // display name
+  query?: any; // for saved queries
+  targetIndex?: string; // for saved queries
+}
 
 export interface JoinCondition {
   id: string;
-  leftIndex: string;
+  leftSource: JoinSource;
   leftField: string;
-  rightIndex: string;
+  rightSource: JoinSource;
   rightField: string;
   joinType: 'inner' | 'left' | 'right' | 'full';
 }
 
 export interface ConsolidatedField {
   id: string;
-  sourceIndex: string;
+  sourceId: string; // can be index name or saved query id
+  sourceName: string; // display name
   sourceField: string;
   alias: string;
   include: boolean;
@@ -21,6 +31,9 @@ export interface MultiIndexJoinConfig {
   // Join configuration
   joins: JoinCondition[];
   consolidatedFields: ConsolidatedField[];
+  
+  // Advanced mode
+  advancedMode: boolean;
   
   // Pagination
   from: number;
@@ -39,17 +52,19 @@ export interface MultiIndexJoinState {
   // Data
   result: any | null;
   availableIndexes: string[];
+  availableSavedQueries: SavedQuery[];
   
   // UI state
   loading: boolean;
   error: string | null;
   indexesLoading: boolean;
+  savedQueriesLoading: boolean;
   
-  // Field mappings for each index
-  indexMappings: Record<string, string[]>;
+  // Field mappings for each source
+  sourceMappings: Record<string, string[]>; // source ID -> fields
   mappingsLoading: Record<string, boolean>;
   
-  // Preview data
+  // Preview data for sources
   previewData: Record<string, any[]>;
   previewLoading: Record<string, boolean>;
 }
@@ -66,13 +81,15 @@ export interface MultiIndexJoinActions {
   removeConsolidatedField: (id: string) => void;
   setPagination: (from: number, size: number, page: number, rowsPerPage: number) => void;
   setEnableFielddata: (enable: boolean) => void;
+  setAdvancedMode: (enabled: boolean) => void;
   
   // Data actions
   executeJoin: () => Promise<void>;
   clearResults: () => void;
   loadAvailableIndexes: () => Promise<void>;
-  loadIndexMapping: (index: string) => Promise<void>;
-  loadPreviewData: (index: string) => Promise<void>;
+  loadAvailableSavedQueries: () => Promise<void>;
+  loadSourceMapping: (source: JoinSource) => Promise<void>;
+  loadPreviewData: (source: JoinSource) => Promise<void>;
   
   // Pagination actions
   handlePageChange: (event: unknown, newPage: number) => Promise<void>;
@@ -84,11 +101,14 @@ export interface MultiIndexJoinActions {
   generateJoinId: () => string;
   generateFieldId: () => string;
   validateJoinConfiguration: () => { valid: boolean; errors: string[] };
+  createJoinSourceFromIndex: (index: string) => JoinSource;
+  createJoinSourceFromSavedQuery: (savedQuery: SavedQuery) => JoinSource;
 }
 
 const initialConfig: MultiIndexJoinConfig = {
   joins: [],
   consolidatedFields: [],
+  advancedMode: false,
   from: 0,
   size: 100,
   page: 0,
@@ -100,10 +120,12 @@ const initialState: MultiIndexJoinState = {
   config: initialConfig,
   result: null,
   availableIndexes: [],
+  availableSavedQueries: [],
   loading: false,
   error: null,
   indexesLoading: false,
-  indexMappings: {},
+  savedQueriesLoading: false,
+  sourceMappings: {},
   mappingsLoading: {},
   previewData: {},
   previewLoading: {},
@@ -211,6 +233,19 @@ export const useMultiIndexJoinState = (): MultiIndexJoinState & MultiIndexJoinAc
     }));
   }, []);
 
+  const setAdvancedMode = useCallback((enabled: boolean) => {
+    setState(prev => ({
+      ...prev,
+      config: { 
+        ...prev.config, 
+        advancedMode: enabled,
+        // Clear joins and fields when switching modes
+        joins: [],
+        consolidatedFields: [],
+      },
+    }));
+  }, []);
+
   // Generate unique IDs
   const generateJoinId = useCallback(() => {
     return `join-${Date.now()}-${Math.random().toString(36).substr(2, 9)}`;
@@ -218,6 +253,26 @@ export const useMultiIndexJoinState = (): MultiIndexJoinState & MultiIndexJoinAc
 
   const generateFieldId = useCallback(() => {
     return `field-${Date.now()}-${Math.random().toString(36).substr(2, 9)}`;
+  }, []);
+
+  // Create join source from index
+  const createJoinSourceFromIndex = useCallback((index: string): JoinSource => {
+    return {
+      type: 'index',
+      id: index,
+      name: index,
+    };
+  }, []);
+
+  // Create join source from saved query
+  const createJoinSourceFromSavedQuery = useCallback((savedQuery: SavedQuery): JoinSource => {
+    return {
+      type: 'savedQuery',
+      id: savedQuery.id,
+      name: savedQuery.name,
+      query: savedQuery.queryData.rawQuery,
+      targetIndex: savedQuery.targetIndex,
+    };
   }, []);
 
   // Validate join configuration
@@ -235,42 +290,42 @@ export const useMultiIndexJoinState = (): MultiIndexJoinState & MultiIndexJoinAc
     // Check for duplicate join conditions
     const joinKeys = new Set();
     state.config.joins.forEach(join => {
-      const key = `${join.leftIndex}-${join.leftField}-${join.rightIndex}-${join.rightField}`;
+      const key = `${join.leftSource.id}-${join.leftField}-${join.rightSource.id}-${join.rightField}`;
       if (joinKeys.has(key)) {
-        errors.push(`Duplicate join condition found: ${join.leftIndex}.${join.leftField} = ${join.rightIndex}.${join.rightField}`);
+        errors.push(`Duplicate join condition found: ${join.leftSource.name}.${join.leftField} = ${join.rightSource.name}.${join.rightField}`);
       }
       joinKeys.add(key);
     });
 
     // Check for circular joins
-    const indexGraph = new Map();
+    const sourceGraph = new Map();
     state.config.joins.forEach(join => {
-      if (!indexGraph.has(join.leftIndex)) {
-        indexGraph.set(join.leftIndex, new Set());
+      if (!sourceGraph.has(join.leftSource.id)) {
+        sourceGraph.set(join.leftSource.id, new Set());
       }
-      indexGraph.get(join.leftIndex).add(join.rightIndex);
+      sourceGraph.get(join.leftSource.id).add(join.rightSource.id);
     });
 
     // Simple cycle detection (for basic cases)
     const visited = new Set();
-    const detectCycle = (index: string, path: Set<string>): boolean => {
-      if (path.has(index)) return true;
-      if (visited.has(index)) return false;
+    const detectCycle = (sourceId: string, path: Set<string>): boolean => {
+      if (path.has(sourceId)) return true;
+      if (visited.has(sourceId)) return false;
 
-      visited.add(index);
-      path.add(index);
+      visited.add(sourceId);
+      path.add(sourceId);
 
-      const neighbors = indexGraph.get(index) || new Set();
+      const neighbors = sourceGraph.get(sourceId) || new Set();
       for (const neighbor of neighbors) {
         if (detectCycle(neighbor, path)) return true;
       }
 
-      path.delete(index);
+      path.delete(sourceId);
       return false;
     };
 
-    for (const index of indexGraph.keys()) {
-      if (detectCycle(index, new Set())) {
+    for (const sourceId of sourceGraph.keys()) {
+      if (detectCycle(sourceId, new Set())) {
         errors.push('Circular join detected - joins cannot form cycles');
         break;
       }
@@ -286,8 +341,29 @@ export const useMultiIndexJoinState = (): MultiIndexJoinState & MultiIndexJoinAc
   const buildJoinQuery = useCallback(() => {
     const { joins, consolidatedFields, from, size, enableFielddata } = state.config;
     
+    // Transform joins to include full source information for backend processing
+    const processedJoins = joins.map(join => ({
+      ...join,
+      leftSource: {
+        ...join.leftSource,
+        // Include query if it's a saved query type
+        ...(join.leftSource.type === 'savedQuery' && { 
+          query: join.leftSource.query,
+          targetIndex: join.leftSource.targetIndex 
+        })
+      },
+      rightSource: {
+        ...join.rightSource,
+        // Include query if it's a saved query type
+        ...(join.rightSource.type === 'savedQuery' && { 
+          query: join.rightSource.query,
+          targetIndex: join.rightSource.targetIndex 
+        })
+      }
+    }));
+    
     return {
-      joins,
+      joins: processedJoins,
       consolidatedFields: consolidatedFields.filter(field => field.include),
       from,
       size,
@@ -369,54 +445,101 @@ export const useMultiIndexJoinState = (): MultiIndexJoinState & MultiIndexJoinAc
     }
   }, []);
 
-  // Load index mapping
-  const loadIndexMapping = useCallback(async (index: string) => {
-    if (!index || state.indexMappings[index]) return;
-
-    setState(prev => ({
-      ...prev,
-      mappingsLoading: { ...prev.mappingsLoading, [index]: true },
-    }));
+  // Load available saved queries
+  const loadAvailableSavedQueries = useCallback(async () => {
+    setState(prev => ({ ...prev, savedQueriesLoading: true }));
 
     try {
-      const response = await fetch(`/api/direct-query/indexes/${index}/mapping`);
-      if (!response.ok) throw new Error('Failed to load index mapping');
+      const response = await fetch('/api/saved-queries');
+      if (!response.ok) throw new Error('Failed to load saved queries');
       
       const data = await response.json();
-      
-      // Extract field names from mapping
-      const fields = extractFieldsFromMapping(data.data);
-      
       setState(prev => ({
         ...prev,
-        indexMappings: { ...prev.indexMappings, [index]: fields },
-        mappingsLoading: { ...prev.mappingsLoading, [index]: false },
+        availableSavedQueries: data.data?.queries || [],
+        savedQueriesLoading: false,
       }));
     } catch (error) {
       setState(prev => ({
         ...prev,
-        mappingsLoading: { ...prev.mappingsLoading, [index]: false },
-        error: error instanceof Error ? error.message : 'Failed to load index mapping',
+        savedQueriesLoading: false,
+        error: error instanceof Error ? error.message : 'Failed to load saved queries',
       }));
     }
-  }, [state.indexMappings]);
+  }, []);
 
-  // Load preview data
-  const loadPreviewData = useCallback(async (index: string) => {
-    if (!index || state.previewData[index]) return;
+  // Load source mapping (works for both indexes and saved queries)
+  const loadSourceMapping = useCallback(async (source: JoinSource) => {
+    if (!source.id || state.sourceMappings[source.id]) return;
 
     setState(prev => ({
       ...prev,
-      previewLoading: { ...prev.previewLoading, [index]: true },
+      mappingsLoading: { ...prev.mappingsLoading, [source.id]: true },
     }));
 
     try {
+      if (source.type === 'index') {
+        // Load mapping from index
+        const response = await fetch(`/api/direct-query/indexes/${source.id}/mapping`);
+        if (!response.ok) throw new Error('Failed to load index mapping');
+        
+        const data = await response.json();
+        const fields = extractFieldsFromMapping(data.data);
+        
+        setState(prev => ({
+          ...prev,
+          sourceMappings: { ...prev.sourceMappings, [source.id]: fields },
+          mappingsLoading: { ...prev.mappingsLoading, [source.id]: false },
+        }));
+      } else if (source.type === 'savedQuery' && source.targetIndex) {
+        // Load mapping from the saved query's target index
+        const response = await fetch(`/api/direct-query/indexes/${source.targetIndex}/mapping`);
+        if (!response.ok) throw new Error('Failed to load target index mapping');
+        
+        const data = await response.json();
+        const fields = extractFieldsFromMapping(data.data);
+        
+        setState(prev => ({
+          ...prev,
+          sourceMappings: { ...prev.sourceMappings, [source.id]: fields },
+          mappingsLoading: { ...prev.mappingsLoading, [source.id]: false },
+        }));
+      }
+    } catch (error) {
+      setState(prev => ({
+        ...prev,
+        mappingsLoading: { ...prev.mappingsLoading, [source.id]: false },
+        error: error instanceof Error ? error.message : 'Failed to load source mapping',
+      }));
+    }
+  }, [state.sourceMappings]);
+
+  // Load preview data (works for both indexes and saved queries)
+  const loadPreviewData = useCallback(async (source: JoinSource) => {
+    if (!source.id || state.previewData[source.id]) return;
+
+    setState(prev => ({
+      ...prev,
+      previewLoading: { ...prev.previewLoading, [source.id]: true },
+    }));
+
+    try {
+      let query, index;
+
+      if (source.type === 'index') {
+        query = { match_all: {} };
+        index = source.id;
+      } else if (source.type === 'savedQuery') {
+        query = source.query || { match_all: {} };
+        index = source.targetIndex;
+      }
+
       const response = await fetch('/api/direct-query', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({
           index,
-          query: { match_all: {} },
+          query,
           size: 5, // Small preview
         }),
       });
@@ -427,13 +550,13 @@ export const useMultiIndexJoinState = (): MultiIndexJoinState & MultiIndexJoinAc
       
       setState(prev => ({
         ...prev,
-        previewData: { ...prev.previewData, [index]: data.data?.hits?.hits || [] },
-        previewLoading: { ...prev.previewLoading, [index]: false },
+        previewData: { ...prev.previewData, [source.id]: data.data?.hits?.hits || [] },
+        previewLoading: { ...prev.previewLoading, [source.id]: false },
       }));
     } catch (error) {
       setState(prev => ({
         ...prev,
-        previewLoading: { ...prev.previewLoading, [index]: false },
+        previewLoading: { ...prev.previewLoading, [source.id]: false },
       }));
     }
   }, [state.previewData]);
@@ -515,7 +638,7 @@ export const useMultiIndexJoinState = (): MultiIndexJoinState & MultiIndexJoinAc
     // Get columns from consolidated fields
     const columns = state.config.consolidatedFields
       .filter(field => field.include)
-      .map(field => field.alias || `${field.sourceIndex}.${field.sourceField}`);
+      .map(field => field.alias || `${field.sourceName}.${field.sourceField}`);
     
     // Create rows
     const rows = results.map((result: any, index: number) => {
@@ -527,8 +650,8 @@ export const useMultiIndexJoinState = (): MultiIndexJoinState & MultiIndexJoinAc
       state.config.consolidatedFields
         .filter(field => field.include)
         .forEach(field => {
-          const columnName = field.alias || `${field.sourceIndex}.${field.sourceField}`;
-          const value = result[field.sourceIndex]?.[field.sourceField];
+          const columnName = field.alias || `${field.sourceName}.${field.sourceField}`;
+          const value = result[field.sourceId]?.[field.sourceField];
           row[columnName] = value !== undefined ? value : '-';
         });
 
@@ -538,10 +661,11 @@ export const useMultiIndexJoinState = (): MultiIndexJoinState & MultiIndexJoinAc
     return { columns, rows };
   }, [state.result, state.config.consolidatedFields]);
 
-  // Load indexes on mount
+  // Load indexes and saved queries on mount
   useEffect(() => {
     loadAvailableIndexes();
-  }, [loadAvailableIndexes]);
+    loadAvailableSavedQueries();
+  }, [loadAvailableIndexes, loadAvailableSavedQueries]);
 
   return {
     ...state,
@@ -555,10 +679,12 @@ export const useMultiIndexJoinState = (): MultiIndexJoinState & MultiIndexJoinAc
     removeConsolidatedField,
     setPagination,
     setEnableFielddata,
+    setAdvancedMode,
     executeJoin,
     clearResults,
     loadAvailableIndexes,
-    loadIndexMapping,
+    loadAvailableSavedQueries,
+    loadSourceMapping,
     loadPreviewData,
     handlePageChange,
     handleRowsPerPageChange,
@@ -567,5 +693,7 @@ export const useMultiIndexJoinState = (): MultiIndexJoinState & MultiIndexJoinAc
     generateJoinId,
     generateFieldId,
     validateJoinConfiguration,
+    createJoinSourceFromIndex,
+    createJoinSourceFromSavedQuery,
   };
 };

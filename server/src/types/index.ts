@@ -109,13 +109,39 @@ export interface UpdateSavedQueryRequest {
 }
 
 // Multi-Index Join Types
+export interface JoinSource {
+  type: 'index' | 'savedQuery';
+  id: string; // index name or saved query id
+  name: string; // display name
+  query?: any; // for saved queries
+  targetIndex?: string; // for saved queries
+}
+
+export interface ConsolidatedField {
+  id: string;
+  sourceId: string; // can be index name or saved query id
+  sourceName: string; // display name
+  sourceField: string;
+  alias: string;
+  include: boolean;
+}
+
 export interface JoinConfiguration {
-  leftIndex: string;
-  rightIndex: string;
-  joinField: {
+  // Old format (backward compatibility)
+  leftIndex?: string;
+  rightIndex?: string;
+  joinField?: {
     left: string;    // Field name in left index
     right: string;   // Field name in right index
   };
+  
+  // New format
+  leftSource?: JoinSource;
+  rightSource?: JoinSource;
+  leftField?: string;
+  rightField?: string;
+  
+  // Common fields
   joinType: 'inner' | 'left' | 'right' | 'full';
   fieldsToReturn?: {
     left: string[];  // Fields to return from left index (with optional prefix)
@@ -128,9 +154,10 @@ export interface JoinConfiguration {
 
 export interface MultiIndexJoinRequest {
   joins: JoinConfiguration[];  // Support for multiple joins
-  consolidatedFields?: string[]; // Optional field selection for final result
+  consolidatedFields?: ConsolidatedField[]; // New format for field selection
   from?: number;
   size?: number;
+  enableFielddata?: boolean;
 }
 
 export interface JoinedRecord {

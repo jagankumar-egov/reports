@@ -140,24 +140,58 @@ const AutoQuery: React.FC = () => {
     return filters;
   }, [searchParams]);
 
+  // Track initialization to prevent re-renders
+  const [initialized, setInitialized] = React.useState(false);
+
   // Initialize from URL parameters
   useEffect(() => {
+    if (initialized) return;
+
     const indexFromUrl = searchParams.get('index');
+    const queryFromUrl = searchParams.get('query');
     const autoExecute = searchParams.get('autoExecute') === 'true';
 
+    // If there's a direct query parameter, redirect to Direct Query page
+    if (queryFromUrl && indexFromUrl) {
+      const redirectUrl = new URL('/direct-query', window.location.origin);
+      redirectUrl.searchParams.set('index', indexFromUrl);
+      redirectUrl.searchParams.set('query', queryFromUrl);
+      redirectUrl.searchParams.set('autoExecute', 'true');
+      if (searchParams.get('from')) redirectUrl.searchParams.set('from', searchParams.get('from')!);
+      if (searchParams.get('size')) redirectUrl.searchParams.set('size', searchParams.get('size')!);
+      
+      window.location.href = redirectUrl.toString();
+      return;
+    }
+
+    // Set index if provided
     if (indexFromUrl && indexFromUrl !== autoQueryState.config.selectedIndex) {
       autoQueryState.setSelectedIndex(indexFromUrl);
     }
 
+    // Handle filter-based queries
     if (defaultFilters.length > 0) {
       autoQueryState.setAppliedFilters(defaultFilters);
       
-      // Auto-execute if requested and not already executed
-      if (autoExecute && indexFromUrl && !autoQueryState.result) {
-        autoQueryState.executeQuery();
+      // Auto-execute if requested
+      if (autoExecute && indexFromUrl) {
+        setTimeout(() => autoQueryState.executeQuery(), 100);
       }
     }
-  }, [searchParams, defaultFilters, autoQueryState]);
+
+    setInitialized(true);
+  }, []);
+
+  // Handle URL parameter changes after initialization
+  useEffect(() => {
+    if (!initialized) return;
+
+    const indexFromUrl = searchParams.get('index');
+    
+    if (indexFromUrl && indexFromUrl !== autoQueryState.config.selectedIndex) {
+      autoQueryState.setSelectedIndex(indexFromUrl);
+    }
+  }, [initialized, searchParams]);
 
   // Handle index change
   const handleIndexChange = useCallback((index: string) => {

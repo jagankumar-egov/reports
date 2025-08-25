@@ -447,6 +447,50 @@ export const useDirectQueryState = (): DirectQueryState & DirectQueryActions => 
     loadAvailableIndexes();
   }, [loadAvailableIndexes]);
 
+  // Initialize from URL parameters (for shareable links)
+  useEffect(() => {
+    if (typeof window !== 'undefined') {
+      const urlParams = new URLSearchParams(window.location.search);
+      const indexFromUrl = urlParams.get('index');
+      const queryFromUrl = urlParams.get('query');
+      const autoExecute = urlParams.get('autoExecute') === 'true';
+      const fromParam = urlParams.get('from');
+      const sizeParam = urlParams.get('size');
+
+      let hasChanges = false;
+
+      // Set index if provided
+      if (indexFromUrl && indexFromUrl !== state.config.selectedIndex) {
+        setSelectedIndex(indexFromUrl);
+        hasChanges = true;
+      }
+
+      // Set query if provided
+      if (queryFromUrl && queryFromUrl !== state.config.queryText) {
+        try {
+          const parsedQuery = JSON.parse(decodeURIComponent(queryFromUrl));
+          setQueryText(JSON.stringify(parsedQuery, null, 2));
+          hasChanges = true;
+        } catch (error) {
+          console.error('Failed to parse query from URL:', error);
+        }
+      }
+
+      // Set pagination if provided
+      if (fromParam || sizeParam) {
+        const from = fromParam ? parseInt(fromParam) : state.config.from;
+        const size = sizeParam ? parseInt(sizeParam) : state.config.size;
+        setPagination(from, size, Math.floor(from / size), size);
+        hasChanges = true;
+      }
+
+      // Auto-execute if requested and we have the necessary parameters
+      if (autoExecute && indexFromUrl && queryFromUrl && hasChanges && !state.result) {
+        setTimeout(() => executeQuery(), 500); // Small delay to ensure state is updated
+      }
+    }
+  }, []); // Run only once on mount
+
   return {
     ...state,
     setSelectedIndex,

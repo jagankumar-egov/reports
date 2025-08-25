@@ -34,37 +34,106 @@ export class MultiIndexJoinController {
     for (let i = 0; i < joins.length; i++) {
       const join = joins[i];
       
-      if (!join.leftIndex || typeof join.leftIndex !== 'string') {
+      // Support both old format (leftIndex/rightIndex) and new format (leftSource/rightSource)
+      const hasOldFormat = join.leftIndex && join.rightIndex && typeof join.leftIndex === 'string' && typeof join.rightIndex === 'string';
+      const hasNewFormat = join.leftSource && join.rightSource && 
+                          typeof join.leftSource === 'object' && join.leftSource !== null &&
+                          typeof join.rightSource === 'object' && join.rightSource !== null &&
+                          join.leftSource.id && join.rightSource.id;
+      
+      // If we have new format, prioritize it over old format validation
+      const useNewFormat = hasNewFormat || (!hasOldFormat && (join.leftSource || join.rightSource));
+      
+      if (!hasOldFormat && !useNewFormat) {
         res.status(400).json({
           success: false,
           error: {
-            code: 'INVALID_LEFT_INDEX',
-            message: `Join ${i}: leftIndex is required and must be a string`
+            code: 'INVALID_JOIN_SOURCES',
+            message: `Join ${i}: Either leftIndex/rightIndex or leftSource/rightSource is required`
           }
         });
         return;
       }
 
-      if (!join.rightIndex || typeof join.rightIndex !== 'string') {
-        res.status(400).json({
-          success: false,
-          error: {
-            code: 'INVALID_RIGHT_INDEX',
-            message: `Join ${i}: rightIndex is required and must be a string`
-          }
-        });
-        return;
-      }
+      if (useNewFormat) {
+        // Validate new format
+        if (!join.leftSource || !join.leftSource.id || typeof join.leftSource.id !== 'string') {
+          res.status(400).json({
+            success: false,
+            error: {
+              code: 'INVALID_LEFT_SOURCE',
+              message: `Join ${i}: leftSource with valid id is required`
+            }
+          });
+          return;
+        }
 
-      if (!join.joinField || !join.joinField.left || !join.joinField.right) {
-        res.status(400).json({
-          success: false,
-          error: {
-            code: 'INVALID_JOIN_FIELD',
-            message: `Join ${i}: joinField with left and right properties is required`
-          }
-        });
-        return;
+        if (!join.rightSource || !join.rightSource.id || typeof join.rightSource.id !== 'string') {
+          res.status(400).json({
+            success: false,
+            error: {
+              code: 'INVALID_RIGHT_SOURCE',
+              message: `Join ${i}: rightSource with valid id is required`
+            }
+          });
+          return;
+        }
+
+        if (!join.leftField || typeof join.leftField !== 'string') {
+          res.status(400).json({
+            success: false,
+            error: {
+              code: 'INVALID_LEFT_FIELD',
+              message: `Join ${i}: leftField is required and must be a string`
+            }
+          });
+          return;
+        }
+
+        if (!join.rightField || typeof join.rightField !== 'string') {
+          res.status(400).json({
+            success: false,
+            error: {
+              code: 'INVALID_RIGHT_FIELD',
+              message: `Join ${i}: rightField is required and must be a string`
+            }
+          });
+          return;
+        }
+      } else {
+        // Validate old format
+        if (!join.leftIndex || typeof join.leftIndex !== 'string') {
+          res.status(400).json({
+            success: false,
+            error: {
+              code: 'INVALID_LEFT_INDEX',
+              message: `Join ${i}: leftIndex is required and must be a string`
+            }
+          });
+          return;
+        }
+
+        if (!join.rightIndex || typeof join.rightIndex !== 'string') {
+          res.status(400).json({
+            success: false,
+            error: {
+              code: 'INVALID_RIGHT_INDEX',
+              message: `Join ${i}: rightIndex is required and must be a string`
+            }
+          });
+          return;
+        }
+
+        if (!join.joinField || !join.joinField.left || !join.joinField.right) {
+          res.status(400).json({
+            success: false,
+            error: {
+              code: 'INVALID_JOIN_FIELD',
+              message: `Join ${i}: joinField with left and right properties is required`
+            }
+          });
+          return;
+        }
       }
 
       if (!['inner', 'left', 'right', 'full'].includes(join.joinType)) {
