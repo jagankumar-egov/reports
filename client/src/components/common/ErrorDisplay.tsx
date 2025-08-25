@@ -9,17 +9,21 @@ import {
 interface ErrorDisplayProps {
   error: string | null;
   onClose?: () => void;
+  onRetry?: () => void;
   severity?: AlertColor;
   title?: string;
   showTitle?: boolean;
+  context?: string;
 }
 
 const ErrorDisplay: React.FC<ErrorDisplayProps> = ({
   error,
   onClose,
+  onRetry,
   severity = 'error',
   title = 'Query Execution Failed',
   showTitle = true,
+  context,
 }) => {
   if (!error) {
     return null;
@@ -28,7 +32,7 @@ const ErrorDisplay: React.FC<ErrorDisplayProps> = ({
   return (
     <Alert 
       severity={severity}
-      onClose={onClose}
+      onClose={onClose || onRetry}
       sx={{ 
         '& .MuiAlert-message': { 
           fontSize: '0.95rem',
@@ -40,7 +44,7 @@ const ErrorDisplay: React.FC<ErrorDisplayProps> = ({
       <Box>
         {showTitle && (
           <Typography variant="body1" component="div" sx={{ fontWeight: 'medium', mb: 0.5 }}>
-            {title}
+            {context ? `${context}: ${title}` : title}
           </Typography>
         )}
         <Typography variant="body2" component="div">

@@ -14,12 +14,12 @@ import {
   AccountCircle as AccountCircleIcon,
 } from '@mui/icons-material';
 
-import { useAppSelector, useAppDispatch } from '@/store';
+import { useAppDispatch } from '@/store';
 import { toggleSidebar } from '@/store/slices/uiSlice';
 
 const AppBar: React.FC = () => {
   const dispatch = useAppDispatch();
-  const { sidebarOpen } = useAppSelector((state) => state.ui);
+  // const { sidebarOpen } = useAppSelector((state) => state.ui);
   
   const handleToggleSidebar = () => {
     dispatch(toggleSidebar());

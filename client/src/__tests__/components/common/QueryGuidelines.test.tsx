@@ -1,4 +1,3 @@
-import React from 'react';
 import { render, screen, fireEvent, waitFor } from '@testing-library/react';
 import '@testing-library/jest-dom';
 import QueryGuidelines from '../../../components/common/QueryGuidelines';
@@ -129,7 +128,7 @@ describe('QueryGuidelines Component', () => {
     expect(screen.getByText('Term Query:')).toBeInTheDocument();
     
     // Check if code is displayed in pre tags
-    const codeBlocks = screen.getAllByText((content, element) => {
+    const codeBlocks = screen.getAllByText((_content, element) => {
       return element?.tagName.toLowerCase() === 'pre';
     });
     expect(codeBlocks.length).toBeGreaterThan(0);
@@ -199,7 +198,7 @@ describe('QueryGuidelines Component', () => {
     render(<QueryGuidelines defaultOpen={true} />);
     
     const firstTab = screen.getByRole('tab', { name: 'Basic Queries' });
-    const secondTab = screen.getByRole('tab', { name: 'Advanced Queries' });
+    // const secondTab = screen.getByRole('tab', { name: 'Advanced Queries' });
     
     // Tab should be focusable
     firstTab.focus();

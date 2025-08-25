@@ -141,12 +141,12 @@ const QueryBuilderPage: React.FC = () => {
       }
       
       // Convert saved visual fields back to conditions
-      const loadedConditions: QueryCondition[] = savedQuery.queryData.visualFields.map((field, index) => ({
+      const loadedConditions: QueryCondition[] = savedQuery.queryData.visualFields.map((field: any, index) => ({
         id: `condition-${index}`,
         field: field.field,
         operator: field.operator,
         value: field.value,
-        type: field.type,
+        logicalOperator: 'AND' as const,
       }));
       
       setConditions(loadedConditions);
@@ -174,7 +174,7 @@ const QueryBuilderPage: React.FC = () => {
         field: condition.field,
         operator: condition.operator,
         value: condition.value,
-        type: condition.type,
+        type: (condition as any).type,
       })),
       rawQuery: builtQuery,
     };

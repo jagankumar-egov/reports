@@ -3,7 +3,7 @@ import {
   Dialog,
   DialogTitle,
   DialogContent,
-  DialogActions,
+  // DialogActions,
   Button,
   List,
   ListItem,
@@ -29,7 +29,7 @@ import {
   Search as SearchIcon,
   Close as CloseIcon,
   PlayArrow as PlayArrowIcon,
-  Edit as EditIcon,
+  // Edit as EditIcon,
   Delete as DeleteIcon,
   MoreVert as MoreVertIcon,
   Refresh as RefreshIcon,
@@ -71,7 +71,7 @@ const SavedQueriesList: React.FC<SavedQueriesListProps> = ({
   const [searchTerm, setSearchTerm] = useState('');
   const [filterType, setFilterType] = useState<string>('');
   const [filterIndex, setFilterIndex] = useState<string>(targetIndex || '');
-  const [selectedTags, setSelectedTags] = useState<string[]>([]);
+  const [selectedTags] = useState<string[]>([]);
   const [menuAnchor, setMenuAnchor] = useState<{ element: HTMLElement; queryId: string } | null>(null);
 
   const {
@@ -147,7 +147,7 @@ const SavedQueriesList: React.FC<SavedQueriesListProps> = ({
   };
 
   // Get all unique tags from queries for filtering
-  const allTags = Array.from(new Set(queries.flatMap(q => q.metadata.tags || [])));
+  // const allTags = Array.from(new Set(queries.flatMap(q => q.metadata.tags || [])));
 
   return (
     <Dialog 

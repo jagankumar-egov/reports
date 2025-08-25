@@ -11,7 +11,7 @@ import {
   Alert,
   IconButton,
   Tooltip,
-  Divider,
+  // Divider,
   Paper,
   List,
   ListItem,
@@ -326,7 +326,7 @@ const AutoQuery: React.FC = () => {
 
   // Remove a filter
   const removeFilter = (indexToRemove: number) => {
-    const updatedFilters = appliedFilters.filter((_, index) => index !== indexToRemove);
+    // const updatedFilters = appliedFilters.filter((_, index) => index !== indexToRemove);
     const newParams = new URLSearchParams(searchParams);
     
     // Remove the filter from URL

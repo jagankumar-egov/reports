@@ -253,20 +253,6 @@ export const lightTheme = createTheme({
         },
       },
     },
-    MuiDataGrid: {
-      styleOverrides: {
-        root: {
-          border: 'none',
-          '& .MuiDataGrid-cell': {
-            borderBottom: `1px solid ${lightThemeOptions.custom?.dataGrid?.borderColor}`,
-          },
-          '& .MuiDataGrid-columnHeaders': {
-            backgroundColor: lightThemeOptions.custom?.dataGrid?.headerBackgroundColor,
-            borderBottom: `1px solid ${lightThemeOptions.custom?.dataGrid?.borderColor}`,
-          },
-        },
-      },
-    },
   },
 });
 
@@ -274,20 +260,7 @@ export const darkTheme = createTheme({
   ...darkThemeOptions,
   components: {
     ...lightTheme.components,
-    MuiDataGrid: {
-      styleOverrides: {
-        root: {
-          border: 'none',
-          '& .MuiDataGrid-cell': {
-            borderBottom: `1px solid ${darkThemeOptions.custom?.dataGrid?.borderColor}`,
-          },
-          '& .MuiDataGrid-columnHeaders': {
-            backgroundColor: darkThemeOptions.custom?.dataGrid?.headerBackgroundColor,
-            borderBottom: `1px solid ${darkThemeOptions.custom?.dataGrid?.borderColor}`,
-          },
-        },
-      },
-    },
+    // MuiDataGrid styles would go here if using @mui/x-data-grid
   },
 });
 

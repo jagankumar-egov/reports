@@ -17,12 +17,12 @@ import {
   Paper,
   Chip,
   IconButton,
-  Tooltip,
+  // Tooltip,
   List,
   ListItem,
   ListItemText,
   Divider,
-  Alert,
+  // Alert,
 } from '@mui/material';
 import {
   ExpandMore as ExpandMoreIcon,
@@ -118,7 +118,7 @@ const AggregationsDisplay: React.FC<AggregationsDisplayProps> = ({
     }
   };
 
-  const renderTermsAggregation = (aggName: string, aggregation: any) => {
+  const renderTermsAggregation = (_aggName: string, aggregation: any) => {
     const buckets = aggregation.buckets as AggregationBucket[];
     const totalDocs = buckets.reduce((sum, bucket) => sum + bucket.doc_count, 0);
 
@@ -210,7 +210,7 @@ const AggregationsDisplay: React.FC<AggregationsDisplayProps> = ({
     );
   };
 
-  const renderStatsAggregation = (aggName: string, stats: StatsAggregation) => (
+  const renderStatsAggregation = (_aggName: string, stats: StatsAggregation) => (
     <Box>
       <List dense>
         <ListItem>
@@ -251,18 +251,18 @@ const AggregationsDisplay: React.FC<AggregationsDisplayProps> = ({
     </Box>
   );
 
-  const renderMetricAggregation = (aggName: string, aggregation: any) => (
+  const renderMetricAggregation = (_aggName: string, aggregation: any) => (
     <Box sx={{ p: 2, textAlign: 'center' }}>
       <Typography variant="h4" color="primary.main" gutterBottom>
         {formatValue(aggregation.value)}
       </Typography>
       <Typography variant="body2" color="text.secondary">
-        {aggName.replace(/_/g, ' ').toUpperCase()}
+        {_aggName.replace(/_/g, ' ').toUpperCase()}
       </Typography>
     </Box>
   );
 
-  const renderPercentilesAggregation = (aggName: string, aggregation: any) => (
+  const renderPercentilesAggregation = (_aggName: string, aggregation: any) => (
     <TableContainer component={Paper} variant="outlined">
       <Table size="small">
         <TableHead>
@@ -283,7 +283,7 @@ const AggregationsDisplay: React.FC<AggregationsDisplayProps> = ({
     </TableContainer>
   );
 
-  const renderGenericAggregation = (aggName: string, aggregation: any) => (
+  const renderGenericAggregation = (_aggName: string, aggregation: any) => (
     <Box sx={{ 
       bgcolor: 'grey.50', 
       p: 2, 

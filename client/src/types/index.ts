@@ -73,6 +73,9 @@ export interface UiState {
   notifications: Notification[];
   loading: {
     global: boolean;
+    query?: boolean;
+    fields?: boolean;
+    projects?: boolean;
   };
 }
 

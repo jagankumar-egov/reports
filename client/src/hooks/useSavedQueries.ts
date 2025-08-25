@@ -3,7 +3,7 @@ import {
   SavedQuery, 
   CreateSavedQueryRequest, 
   UpdateSavedQueryRequest,
-  SavedQueriesListResponse 
+  // SavedQueriesListResponse 
 } from '../types';
 import { savedQueriesService } from '../services/savedQueries';
 

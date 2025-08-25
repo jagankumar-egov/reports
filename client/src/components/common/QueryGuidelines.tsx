@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState } from 'react';
 import {
   Box,
   Typography,
@@ -42,7 +42,7 @@ const QueryGuidelines: React.FC<QueryGuidelinesProps> = ({
 }) => {
   const [open, setOpen] = useState(defaultOpen);
   const [selectedTab, setSelectedTab] = useState(0);
-  const [config, setConfig] = useState<GuidelinesConfig>(queryGuidelinesConfig);
+  const [config] = useState<GuidelinesConfig>(queryGuidelinesConfig);
 
   const displayTitle = title || config.title;
 

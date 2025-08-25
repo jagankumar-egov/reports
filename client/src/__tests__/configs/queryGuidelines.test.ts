@@ -19,7 +19,7 @@ describe('QueryGuidelines Configuration', () => {
   it('should have valid categories structure', () => {
     expect(queryGuidelinesConfig.categories.length).toBeGreaterThan(0);
     
-    queryGuidelinesConfig.categories.forEach((category, index) => {
+    queryGuidelinesConfig.categories.forEach((category) => {
       expect(category).toHaveProperty('label');
       expect(category).toHaveProperty('examples');
       
@@ -34,7 +34,7 @@ describe('QueryGuidelines Configuration', () => {
 
   it('should have valid examples structure', () => {
     queryGuidelinesConfig.categories.forEach((category) => {
-      category.examples.forEach((example, exampleIndex) => {
+      category.examples.forEach((example) => {
         expect(example).toHaveProperty('title');
         expect(example).toHaveProperty('code');
         

@@ -19,7 +19,8 @@ import {
   ErrorDisplay,
   LoadingSpinner,
 } from '@/components/common';
-import { DirectQueryResponse, TableRow } from '@/types';
+import { DirectQueryResponse } from '@/types';
+import { TableRow } from '@/components/common';
 
 export interface QueryResultsSectionProps {
   // Data

@@ -3,7 +3,6 @@ import { DirectQueryRequest, DirectQueryResponse } from '@/types';
 import { directQueryAPI } from '@/services/api';
 
 export interface UseElasticsearchQueryOptions {
-  autoExecute?: boolean;
   initialQuery?: string;
   onResult?: (result: DirectQueryResponse) => void;
   onError?: (error: string) => void;
@@ -29,7 +28,6 @@ export interface ElasticsearchQueryResult {
 
 export const useElasticsearchQuery = (options: UseElasticsearchQueryOptions = {}): ElasticsearchQueryResult => {
   const {
-    autoExecute = false,
     initialQuery = '{\n  "query": {\n    "match_all": {}\n  },\n  "size": 10\n}',
     onResult,
     onError

@@ -3,13 +3,13 @@ import {
   Container,
   Box,
   Typography,
-  Paper,
+  // Paper,
   Alert,
   AlertTitle,
 } from '@mui/material';
 import {
   Code as CodeIcon,
-  Warning as WarningIcon,
+  // Warning as WarningIcon,
 } from '@mui/icons-material';
 
 import DirectQuery from '@/components/query/DirectQuery';

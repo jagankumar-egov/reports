@@ -36,7 +36,7 @@ import { useSavedQueries } from '@/hooks/useSavedQueries';
 const DirectQuery: React.FC = () => {
   // Use shared hooks
   const query = useElasticsearchQuery({
-    onResult: (result) => {
+    onResult: (_result) => {
       setLastQueryWasFiltered(queryUsesFiltering);
       pagination.resetPagination();
     },

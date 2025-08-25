@@ -591,7 +591,7 @@ const MultiIndexJoinPage: React.FC = () => {
             <ToggleButtonGroup
               value={mergeColumns}
               exclusive
-              onChange={(e, value) => value !== null && setMergeColumns(value)}
+              onChange={(_e, value) => value !== null && setMergeColumns(value)}
               size="small"
             >
               <ToggleButton value={true}>
@@ -724,7 +724,7 @@ const MultiIndexJoinPage: React.FC = () => {
           component="div"
           count={rows.length}
           page={page}
-          onPageChange={(event, newPage) => setPage(newPage)}
+          onPageChange={(_event, newPage) => setPage(newPage)}
           rowsPerPage={rowsPerPage}
           onRowsPerPageChange={(event) => {
             setRowsPerPage(parseInt(event.target.value, 10));
@@ -997,7 +997,7 @@ const MultiIndexJoinPage: React.FC = () => {
                   <ToggleButtonGroup
                     value={viewMode}
                     exclusive
-                    onChange={(e, value) => value !== null && setViewMode(value)}
+                    onChange={(_e, value) => value !== null && setViewMode(value)}
                     size="small"
                   >
                     <ToggleButton value="preview">
